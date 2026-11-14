@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>OX NEON - Modern Tic-Tac-Toe</title>
+  <meta name="description" content="Modern clean Tic-Tac-Toe (O,X) game with glowing gradients, AI, Pass & Play, and 4-digit code online multiplayer.">
+  <meta name="theme-color" content="#0a0d14">
+
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Style CSS -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Local Bundled Libraries (100% Offline & Mobile Ready) -->
+  <script src="js/vendor/peerjs.min.js"></script>
+  <script src="js/vendor/confetti.browser.min.js"></script>
+  <script src="js/vendor/qrcode.min.js"></script>
+</head>
+<body>
+
+  <!-- Ambient Glowing Background Elements -->
+  <div class="ambient-bg">
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+    <div class="ambient-grid"></div>
+  </div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Floating Emoji Animation Container -->
+  <div id="floating-emojis" class="floating-emojis-container"></div>
+
+  <!-- Main Application Wrapper -->
+  <div class="app-container">
+
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        </div>
+        <span class="brand-name">OX NEON</span>
+      </div>
+      <div class="nav-actions">
+        <button id="btn-sound" class="icon-btn" title="Toggle Sound" aria-label="Toggle Sound">
+          <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+        </button>
+        <button id="btn-fullscreen" class="icon-btn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+          <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ====================================================================
+         SCREEN 1: MAIN MENU (Play, Multiplayer, Exit)
+         ==================================================================== -->
+    <main id="screen-menu" class="screen active">
+      
+      <!-- Glowing Animated Hero Logo -->
+      <section class="hero-section">
+        <div class="logo-display">
+          <div class="big-symbol x-symbol">✕</div>
+          <div class="big-symbol o-symbol">○</div>
+        </div>
+        <h1 class="hero-title">TIC • TAC • TOE</h1>
+        <p class="hero-subtitle">Modern Clean Edition</p>
+      </section>
+
+      <!-- Three Main Menu Action Buttons -->
+      <nav class="menu-buttons" aria-label="Main Menu">
+        
+        <!-- 1. PLAY BUTTON -->
+        <button id="btn-menu-play" class="menu-btn btn-play" type="button">
+          <div class="btn-left">
+            <div class="btn-icon-box">
+              <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </div>
+            <div class="btn-texts">
+              <span class="btn-title">PLAY</span>
+              <span class="btn-desc">Pass & Play or Play vs AI</span>
+            </div>
+          </div>
+          <div class="btn-arrow">
+            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
+        </button>
+
+        <!-- 2. MULTIPLAYER BUTTON -->
+        <button id="btn-menu-multiplayer" class="menu-btn btn-multiplayer" type="button">
+          <div class="btn-left">
+            <div class="btn-icon-box">
+              <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+            </div>
+            <div class="btn-texts">
+              <span class="btn-title">MULTIPLAYER</span>
+              <span class="btn-desc">4-Digit Code • Play Online Across Phones</span>
+            </div>
+          </div>
+          <div class="btn-arrow">
+            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
+        </button>
+
+        <!-- 3. EXIT BUTTON -->
+        <button id="btn-menu-exit" class="menu-btn btn-exit" type="button">
+          <div class="btn-left">
+            <div class="btn-icon-box">
+              <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </div>
+            <div class="btn-texts">
+              <span class="btn-title">EXIT</span>
+              <span class="btn-desc">Leave Game Session</span>
+            </div>
+          </div>
+          <div class="btn-arrow">
+            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
+        </button>
+
+      </nav>
+
+      <!-- Player Statistics Summary -->
+      <div class="menu-footer-stats">
+        <div class="stat-item">
+          <span id="stat-total-wins" class="stat-value">0</span>
+          <span class="stat-label">Total Wins</span>
+        </div>
+        <div class="stat-item">
+          <span id="stat-total-ties" class="stat-value">0</span>
+          <span class="stat-label">Ties</span>
+        </div>
+        <div class="stat-item">
+          <span id="stat-total-matches" class="stat-value">0</span>
+          <span class="stat-label">Matches</span>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ====================================================================
+         SCREEN 2: GAME ARENA
+         ==================================================================== -->
+    <main id="screen-game" class="screen">
+      
+      <!-- Top Arena Bar -->
+      <div class="game-top-bar">
+        <button id="btn-back-menu" class="icon-btn" title="Back to Menu" aria-label="Back to Menu">
+          <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div id="mode-badge" class="round-pill-badge">Pass & Play</div>
+        <button id="btn-restart-game" class="icon-btn" title="Restart Board" aria-label="Restart Board">
+          <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+        </button>
+      </div>
+
+      <!-- Modern Scoreboard -->
+      <div class="scoreboard">
+        <!-- Player X Card -->
+        <div id="card-player-x" class="player-card player-x active-turn">
+          <div class="card-top">
+            <div class="player-badge-sym">X</div>
+            <span id="name-player-x" class="player-name">Player X</span>
+          </div>
+          <span id="score-x" class="player-score">0</span>
+          <span class="turn-pill-indicator">TURN</span>
+        </div>
+
+        <!-- Tie Counter -->
+        <div class="tie-card">
+          <span class="tie-label">TIES</span>
+          <span id="score-ties" class="tie-score">0</span>
+        </div>
+
+        <!-- Player O Card -->
+        <div id="card-player-o" class="player-card player-o">
+          <div class="card-top">
+            <div class="player-badge-sym">O</div>
+            <span id="name-player-o" class="player-name">Player O</span>
+          </div>
+          <span id="score-o" class="player-score">0</span>
+          <span class="turn-pill-indicator">TURN</span>
+        </div>
+      </div>
+
+      <!-- Turn Alert Pill Banner -->
+      <div id="turn-banner" class="turn-banner x-turn">
+        Player X's Turn
+      </div>
+
+      <!-- 3x3 Tic-Tac-Toe Board Container -->
+      <div class="board-wrapper">
+        <div class="game-board">
+          <button class="board-cell" data-cell="0" aria-label="Cell 1"></button>
+          <button class="board-cell" data-cell="1" aria-label="Cell 2"></button>
+          <button class="board-cell" data-cell="2" aria-label="Cell 3"></button>
+          <button class="board-cell" data-cell="3" aria-label="Cell 4"></button>
+          <button class="board-cell" data-cell="4" aria-label="Cell 5"></button>
+          <button class="board-cell" data-cell="5" aria-label="Cell 6"></button>
+          <button class="board-cell" data-cell="6" aria-label="Cell 7"></button>
+          <button class="board-cell" data-cell="7" aria-label="Cell 8"></button>
+          <button class="board-cell" data-cell="8" aria-label="Cell 9"></button>
+        </div>
+        <!-- Dynamic Winning Strike Line SVG Overlay -->
+        <div id="strike-overlay" class="strike-svg-overlay"></div>
+      </div>
+
+      <!-- Live Online Reactions Bar -->
+      <div id="reaction-bar" class="reaction-bar" style="display: none;">
+        <button class="reaction-btn" data-emoji="🔥">🔥</button>
+        <button class="reaction-btn" data-emoji="👏">👏</button>
+        <button class="reaction-btn" data-emoji="😱">😱</button>
+        <button class="reaction-btn" data-emoji="🤔">🤔</button>
+        <button class="reaction-btn" data-emoji="💀">💀</button>
+        <button class="reaction-btn" data-emoji="🏆">🏆</button>
+      </div>
+
+      <!-- Game Bottom Bar -->
+      <div class="game-bottom-bar">
+        <button id="btn-leave-game" class="game-action-btn" type="button">
+          <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Leave Match
+        </button>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ====================================================================
+       MODAL 1: PLAY MODE SELECTION (Pass & Play vs AI)
+       ==================================================================== -->
+  <div id="modal-play-select" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          Select Play Mode
+        </h2>
+        <button class="modal-close-btn" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="mode-options-grid">
+        <!-- Local 2-Player -->
+        <div id="btn-mode-local" class="mode-option-card">
+          <div class="mode-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+            <svg viewBox="0 0 24 24" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
+          <div class="btn-texts">
+            <span class="btn-title">Pass & Play (Local 2P)</span>
+            <span class="btn-desc">Two players on this device</span>
+          </div>
+        </div>
+
+        <!-- Play vs AI -->
+        <div id="btn-mode-ai" class="mode-option-card">
+          <div class="mode-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
+            <svg viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>
+          </div>
+          <div class="btn-texts">
+            <span class="btn-title">Play vs AI</span>
+            <span class="btn-desc">Challenge the computer</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Configuration Accordion Panel -->
+      <div id="ai-config-panel" class="ai-config-panel">
+        <span class="config-label">Select Difficulty</span>
+        <div class="difficulty-pill-group">
+          <button class="diff-pill" data-diff="easy">Easy</button>
+          <button class="diff-pill" data-diff="medium">Medium</button>
+          <button class="diff-pill active" data-diff="impossible">Impossible</button>
+        </div>
+
+        <span class="config-label">Choose Your Symbol</span>
+        <div class="symbol-picker-group">
+          <div class="symbol-pick-card x-pick active" data-symbol="X">
+            <span style="color: var(--color-x)">✕</span>
+            <div>
+              <div style="font-weight: 700; font-size: 0.9rem;">Play as X</div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">Goes First</div>
+            </div>
+          </div>
+          <div class="symbol-pick-card o-pick" data-symbol="O">
+            <span style="color: var(--color-o)">○</span>
+            <div>
+              <div style="font-weight: 700; font-size: 0.9rem;">Play as O</div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">Goes Second</div>
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-start-ai-game" class="primary-btn" type="button">
+          Start Game vs AI
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 2: MULTIPLAYER HUB (Generate 4-Digit Code or Enter Code)
+       ==================================================================== -->
+  <div id="modal-multiplayer" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+          Multiplayer Online
+        </h2>
+        <button class="modal-close-btn" aria-label="Close modal">✕</button>
+      </div>
+
+      <!-- Mode Tabs (Host / Join) -->
+      <div class="multiplayer-tabs">
+        <button id="tab-btn-host" class="tab-btn active">Host Room (Code)</button>
+        <button id="tab-btn-join" class="tab-btn">Join with Code</button>
+      </div>
+
+      <!-- TAB 1: HOST ROOM (Shows 4-Digit Code) -->
+      <div id="tab-pane-host" class="tab-pane active">
+        <p style="font-size: 0.88rem; color: var(--text-muted); text-align: center;">
+          Share this <strong>4-digit code</strong> with a friend or open on your other phone to play online!
+        </p>
+
+        <!-- 4-Digit Code Box Container -->
+        <div class="code-display-container">
+          <div class="code-boxes">
+            <div class="digit-box host-digit pulse">-</div>
+            <div class="digit-box host-digit pulse">-</div>
+            <div class="digit-box host-digit pulse">-</div>
+            <div class="digit-box host-digit pulse">-</div>
+          </div>
+
+          <div class="waiting-radar">
+            <span class="radar-dot"></span>
+            <span id="host-status-text">Waiting for opponent to connect...</span>
+          </div>
+        </div>
+
+        <!-- Quick Code Actions -->
+        <div class="code-actions-row">
+          <button id="btn-copy-code" class="secondary-action-btn" type="button">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Copy Code
+          </button>
+          <button id="btn-share-link" class="secondary-action-btn" type="button">
+            <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            Copy Link
+          </button>
+          <button id="btn-toggle-qr" class="secondary-action-btn" type="button">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            QR Scan
+          </button>
+        </div>
+
+        <!-- QR Code Expansion Box -->
+        <div id="qr-container" class="qr-container">
+          <div id="qrcode"></div>
+          <span class="qr-caption">Scan with other phone camera to join instantly</span>
+        </div>
+
+        <button id="btn-regen-code" class="secondary-action-btn" style="width: 100%;" type="button">
+          Generate New 4-Digit Code
+        </button>
+      </div>
+
+      <!-- TAB 2: JOIN ROOM (Input 4-Digit Code) -->
+      <div id="tab-pane-join" class="tab-pane">
+        <p style="font-size: 0.88rem; color: var(--text-muted); text-align: center;">
+          Enter or paste the <strong>4-digit code</strong> generated on the other phone:
+        </p>
+
+        <div class="join-code-form">
+          <div class="code-input-fields">
+            <input type="tel" inputmode="numeric" maxlength="1" class="single-digit-input join-digit" autofocus>
+            <input type="tel" inputmode="numeric" maxlength="1" class="single-digit-input join-digit">
+            <input type="tel" inputmode="numeric" maxlength="1" class="single-digit-input join-digit">
+            <input type="tel" inputmode="numeric" maxlength="1" class="single-digit-input join-digit">
+          </div>
+
+          <button id="btn-paste-code" class="secondary-action-btn" style="width: 100%;" type="button">
+            <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+            Paste 4-Digit Code
+          </button>
+
+          <button id="btn-join-room" class="primary-btn" disabled type="button">
+            Join Match
+          </button>
+
+          <div id="join-status-pill" class="status-pill" style="display: none;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 3: GAME OVER / RESULT
+       ==================================================================== -->
+  <div id="modal-gameover" class="modal-overlay">
+    <div class="modal-content gameover-modal-content">
+      <div id="gameover-icon" class="winner-icon-bubble x-won">X</div>
+      <h2 id="gameover-title" class="gameover-title">Player X Wins!</h2>
+      <p id="gameover-desc" class="gameover-subtitle">3 in a row connected!</p>
+
+      <div class="gameover-actions">
+        <button id="btn-rematch" class="primary-btn" type="button">Play Again (Rematch)</button>
+        <button id="btn-gameover-menu" class="secondary-action-btn" type="button">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 4: EXIT CONFIRMATION
+       ==================================================================== -->
+  <div id="modal-exit" class="modal-overlay">
+    <div class="modal-content exit-modal-content">
+      <div class="exit-icon-bubble">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </div>
+      <h2 class="modal-title" style="margin-top: 12px;">Exit Game?</h2>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px;">
+        Are you sure you want to exit the game session?
+      </p>
+      <div class="exit-actions-row">
+        <button id="btn-cancel-exit" class="secondary-action-btn" type="button">Cancel</button>
+        <button id="btn-confirm-exit" class="btn-danger" type="button">Yes, Exit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Scripts -->
+  <script src="js/audio.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/multiplayer.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
