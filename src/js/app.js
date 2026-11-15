@@ -1,20 +1,28 @@
 /**
- * OX NEON - Main UI Controller & Flow Manager
+ * OX NEON - Main UI Controller & Flow Manager (Version 2.0)
+ * Handles:
+ * - Dynamic Grid Sizes (3x3, 5x5, 10x10)
+ * - Push-to-Talk Voice Chat with Live Recording Visuals & Instant Opponent Playback
+ * - Real-Time In-Game Text Chat with Notifications & Audio Waveforms
+ * - Unbeatable AI & Offline Pass & Play
+ * - Seamless WebRTC P2P Multiplayer
+ * - Android & Windows Native Exit Bridges
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Sound & Engines
+  // Engines & Utilities
   const sound = window.sound;
   const game = window.gameEngine;
   const ai = window.aiEngine;
   const mp = window.multiplayerEngine;
 
-  // DOM Elements
+  // DOM Screens
   const screens = {
     menu: document.getElementById('screen-menu'),
     game: document.getElementById('screen-game')
   };
 
+  // Modals
   const modals = {
     play: document.getElementById('modal-play-select'),
     multiplayer: document.getElementById('modal-multiplayer'),
@@ -22,17 +30,18 @@ document.addEventListener('DOMContentLoaded', () => {
     exit: document.getElementById('modal-exit')
   };
 
-  // Nav Buttons
+  // Navigation Buttons
   const btnSound = document.getElementById('btn-sound');
   const btnFullscreen = document.getElementById('btn-fullscreen');
   const btnMenuPlay = document.getElementById('btn-menu-play');
   const btnMenuMultiplayer = document.getElementById('btn-menu-multiplayer');
   const btnMenuExit = document.getElementById('btn-menu-exit');
 
-  // Play Mode Selection
+  // Play Mode Selection & Grid Pills
   const btnModeLocal = document.getElementById('btn-mode-local');
   const btnModeAi = document.getElementById('btn-mode-ai');
   const aiConfigPanel = document.getElementById('ai-config-panel');
+  const playGridPills = document.querySelectorAll('#play-grid-pills .grid-size-pill');
   const diffPills = document.querySelectorAll('.diff-pill');
   const symbolCards = document.querySelectorAll('.symbol-pick-card');
   const btnStartAiGame = document.getElementById('btn-start-ai-game');
@@ -42,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabBtnJoin = document.getElementById('tab-btn-join');
   const tabPaneHost = document.getElementById('tab-pane-host');
   const tabPaneJoin = document.getElementById('tab-pane-join');
+  const hostGridPills = document.querySelectorAll('#host-grid-pills .grid-size-pill');
   const hostDigitBoxes = document.querySelectorAll('.host-digit');
   const btnRegenCode = document.getElementById('btn-regen-code');
   const btnCopyCode = document.getElementById('btn-copy-code');
@@ -70,11 +80,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreOEl = document.getElementById('score-o');
   const scoreTiesEl = document.getElementById('score-ties');
   const turnBanner = document.getElementById('turn-banner');
-  const boardCells = document.querySelectorAll('.board-cell');
+  const boardWrapper = document.getElementById('board-wrapper');
+  const gameBoard = document.getElementById('game-board');
   const strikeOverlay = document.getElementById('strike-overlay');
+
+  // Communication & Voice Chat Elements
+  const mpCommBar = document.getElementById('mp-comm-bar');
+  const btnToggleChat = document.getElementById('btn-toggle-chat');
+  const unreadChatBadge = document.getElementById('unread-chat-badge');
+  const btnPushToTalk = document.getElementById('btn-push-to-talk');
+  const pttLabel = document.getElementById('ptt-label');
+  const recordingToast = document.getElementById('recording-toast');
+  const recDuration = document.getElementById('rec-duration');
+  const btnToggleReactions = document.getElementById('btn-toggle-reactions');
   const reactionBar = document.getElementById('reaction-bar');
   const reactionButtons = document.querySelectorAll('.reaction-btn');
   const floatingEmojisContainer = document.getElementById('floating-emojis');
+
+  // Chat Drawer Elements
+  const chatDrawer = document.getElementById('chat-drawer');
+  const btnCloseChat = document.getElementById('btn-close-chat');
+  const chatMessagesList = document.getElementById('chat-messages-list');
+  const chatInputForm = document.getElementById('chat-input-form');
+  const chatInputText = document.getElementById('chat-input-text');
+
+  // Floating Notification Banner Elements
+  const floatingCommBanner = document.getElementById('floating-comm-banner');
+  const bannerIconBubble = document.getElementById('banner-icon-bubble');
+  const bannerAuthor = document.getElementById('banner-author');
+  const bannerContent = document.getElementById('banner-content');
+  const bannerAudioWaves = document.getElementById('banner-audio-waves');
 
   // Game Over Elements
   const gameoverIcon = document.getElementById('gameover-icon');
@@ -88,13 +123,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmExit = document.getElementById('btn-confirm-exit');
 
   // State Variables
+  let selectedPlayGridSize = 3;
+  let selectedHostGridSize = 3;
   let selectedAiDiff = 'impossible';
   let selectedHumanSymbol = 'X';
   let qrInstance = null;
   let isAiThinking = false;
   let onlineRematchRequestedByMe = false;
+  let unreadCount = 0;
+  let isPttActive = false;
+  let recTimerInterval = null;
+  let bannerTimer = null;
 
-  // Sound & Mute Setup
+  /* ==========================================================================
+     AUDIO SETUP & SOUND TOGGLE
+     ========================================================================== */
   function updateSoundIcon() {
     const isMuted = sound.isMuted();
     btnSound.innerHTML = isMuted 
@@ -136,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 2400);
   }
 
-  // Modal Open / Close Helpers
+  // Modal Helpers
   function openModal(modal) {
     sound.playClick();
     modal.classList.add('active');
@@ -154,7 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Close modal when tapping backdrop
   document.querySelectorAll('.modal-overlay').forEach(modal => {
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
@@ -164,13 +206,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Screen Switching
   function showScreen(screenName) {
     Object.values(screens).forEach(s => s.classList.remove('active'));
     screens[screenName].classList.add('active');
   }
 
-  // Quick Stats Update on Menu
   function updateMenuStats() {
     const totalWins = game.scores.X + game.scores.O;
     const winsEl = document.getElementById('stat-total-wins');
@@ -184,26 +224,21 @@ document.addEventListener('DOMContentLoaded', () => {
   updateMenuStats();
 
   /* ==========================================================================
-     MAIN MENU BUTTONS (Play, Multiplayer, Exit)
+     MAIN MENU NAVIGATION
      ========================================================================== */
-
-  // 1. PLAY BUTTON
   btnMenuPlay.addEventListener('click', () => {
     openModal(modals.play);
   });
 
-  // 2. MULTIPLAYER BUTTON
   btnMenuMultiplayer.addEventListener('click', () => {
     openModal(modals.multiplayer);
     initializeHostTab();
   });
 
-  // 3. EXIT BUTTON
   btnMenuExit.addEventListener('click', () => {
     openModal(modals.exit);
   });
 
-  // Exit Modal Cancel & Confirm
   btnCancelExit.addEventListener('click', () => {
     closeModal(modals.exit);
     sound.playClick();
@@ -213,45 +248,44 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playClick();
     closeModal(modals.exit);
     
-    // Call Native Android Bridge to completely exit the app
+    // Call Native Android Bridge
     if (window.AndroidBridge && typeof window.AndroidBridge.exitApp === 'function') {
       window.AndroidBridge.exitApp();
       return;
     }
 
-    // Call Native Windows desktop bridge to completely exit the app
+    // Call Native Windows desktop bridge
     if (window.pywebview && window.pywebview.api && typeof window.pywebview.api.exitApp === 'function') {
       window.pywebview.api.exitApp();
       return;
     }
 
-    // Fallback for desktop / standard browser tabs
     try {
       window.close();
     } catch (e) {}
 
     document.body.innerHTML = `
       <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; text-align:center; padding:20px; font-family:'Outfit', sans-serif;">
-        <div style="width:72px; height:72px; border-radius:50%; background:rgba(99,102,241,0.2); display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
-          <svg style="width:36px; height:36px; stroke:#6366f1; fill:none; stroke-width:2;" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
-        </div>
-        <h1 style="font-size:2rem; font-weight:800; color:#fff; margin-bottom:8px;">Thanks for playing!</h1>
-        <p style="color:#94a3b8; max-width:320px; margin-bottom:24px;">You have exited the session.</p>
+        <h1 style="font-size:2rem; font-weight:800; color:#fff; margin-bottom:8px;">Session Closed</h1>
+        <p style="color:#94a3b8; max-width:320px; margin-bottom:24px;">Thanks for playing OX Neon!</p>
         <button onclick="location.reload()" style="padding:12px 28px; border-radius:12px; background:linear-gradient(135deg, #6366f1, #a855f7); color:#fff; font-weight:700; border:none; cursor:pointer;">Return to Game</button>
       </div>
     `;
   });
 
-  // Global Hardware / Gesture Back Button Handler for Android
+  // Global Hardware Back Button Handler for Android
   window.handleHardwareBack = function() {
-    // 1. If any modal is open, close it
+    if (chatDrawer.classList.contains('active')) {
+      chatDrawer.classList.remove('active');
+      return 'handled';
+    }
+
     const activeModals = document.querySelectorAll('.modal-overlay.active');
     if (activeModals.length > 0) {
       activeModals.forEach(m => m.classList.remove('active'));
       return 'handled';
     }
 
-    // 2. If in Game Arena, go back to Main Menu
     if (screens.game && screens.game.classList.contains('active')) {
       if (game.gameMode === 'online') {
         if (confirm('Leave online match?')) {
@@ -264,10 +298,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return 'handled';
     }
 
-    // 3. If on Main Menu, open Exit confirmation modal
     if (screens.menu && screens.menu.classList.contains('active')) {
       if (modals.exit && modals.exit.classList.contains('active')) {
-        // Double back exits app
         if (window.AndroidBridge && typeof window.AndroidBridge.exitApp === 'function') {
           window.AndroidBridge.exitApp();
         }
@@ -282,14 +314,23 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /* ==========================================================================
-     PLAY SELECTION (Local 2P or vs AI)
+     GRID SIZE & MODE SELECTION
      ========================================================================== */
+  // Play Modal Grid Pills
+  playGridPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      sound.playClick();
+      playGridPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      selectedPlayGridSize = parseInt(pill.dataset.grid, 10) || 3;
+    });
+  });
 
   // Local Pass & Play
   btnModeLocal.addEventListener('click', () => {
     sound.playClick();
     closeModal(modals.play);
-    startMatch('local');
+    startMatch('local', { gridSize: selectedPlayGridSize });
   });
 
   // vs AI Button - Toggles config panel
@@ -298,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
     aiConfigPanel.classList.toggle('active');
   });
 
-  // Difficulty selection
+  // AI Difficulty Selection
   diffPills.forEach(pill => {
     pill.addEventListener('click', () => {
       sound.playClick();
@@ -324,15 +365,25 @@ document.addEventListener('DOMContentLoaded', () => {
     closeModal(modals.play);
     startMatch('ai', {
       aiDifficulty: selectedAiDiff,
-      humanSymbol: selectedHumanSymbol
+      humanSymbol: selectedHumanSymbol,
+      gridSize: selectedPlayGridSize
     });
   });
 
   /* ==========================================================================
      MULTIPLAYER HUB (4-Digit Room Code Host & Join)
      ========================================================================== */
+  // Host Grid Pills
+  hostGridPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      sound.playClick();
+      hostGridPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      selectedHostGridSize = parseInt(pill.dataset.hostGrid, 10) || 3;
+      initializeHostTab();
+    });
+  });
 
-  // Switch between Host & Join Tabs
   tabBtnHost.addEventListener('click', () => {
     sound.playClick();
     tabBtnHost.classList.add('active');
@@ -351,13 +402,12 @@ document.addEventListener('DOMContentLoaded', () => {
     joinDigits[0].focus();
   });
 
-  // Initialize Host Room
   function initializeHostTab() {
-    hostStatusText.textContent = 'Generating 4-digit room code...';
-    mp.hostRoom()
+    hostStatusText.textContent = `Generating ${selectedHostGridSize}x${selectedHostGridSize} room code...`;
+    mp.hostRoom(selectedHostGridSize)
       .then(code => {
         displayHostCode(code);
-        hostStatusText.textContent = 'Waiting for opponent to connect...';
+        hostStatusText.textContent = `Room ready (${selectedHostGridSize}x${selectedHostGridSize})! Waiting for opponent...`;
         setupQrCode(code);
       })
       .catch(err => {
@@ -373,25 +423,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Regenerate Code
   btnRegenCode.addEventListener('click', () => {
     sound.playClick();
     initializeHostTab();
   });
 
-  // Copy Code to Clipboard
   btnCopyCode.addEventListener('click', () => {
     sound.playClick();
     if (mp.roomCode) {
       navigator.clipboard.writeText(mp.roomCode).then(() => {
         showToast(`Code ${mp.roomCode} copied!`);
       }).catch(() => {
-        showToast(`Code is: ${mp.roomCode}`);
+        showToast(`Code: ${mp.roomCode}`);
       });
     }
   });
 
-  // Copy Direct Link with 4-Digit Code
   btnShareLink.addEventListener('click', () => {
     sound.playClick();
     if (mp.roomCode) {
@@ -404,7 +451,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // QR Code Generation
   function setupQrCode(code) {
     if (typeof QRCode !== 'undefined' && qrcodeDiv) {
       qrcodeDiv.innerHTML = '';
@@ -425,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
     qrContainer.classList.toggle('active');
   });
 
-  // Join Tab 4-Digit Input Auto-Advance & Paste
+  // Join Inputs
   joinDigits.forEach((input, index) => {
     input.addEventListener('input', (e) => {
       const val = e.target.value.replace(/\D/g, '');
@@ -434,7 +480,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (input.value && index < joinDigits.length - 1) {
         joinDigits[index + 1].focus();
       }
-
       checkJoinInputComplete();
     });
 
@@ -444,31 +489,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Auto-paste on first input
     input.addEventListener('paste', (e) => {
       e.preventDefault();
       const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim();
-      fillJoinCode(pasteData);
+      const digits = pasteData.replace(/\D/g, '').slice(0, 4).split('');
+      if (digits.length > 0) {
+        digits.forEach((d, i) => {
+          if (joinDigits[i]) joinDigits[i].value = d;
+        });
+        checkJoinInputComplete();
+      }
     });
   });
 
-  function fillJoinCode(str) {
-    const digits = str.replace(/\D/g, '').slice(0, 4);
-    if (digits.length >= 4) {
-      digits.split('').forEach((d, idx) => {
-        if (joinDigits[idx]) joinDigits[idx].value = d;
-      });
-      joinDigits[3].focus();
-      checkJoinInputComplete();
-    }
-  }
-
-  function getEnteredJoinCode() {
-    return Array.from(joinDigits).map(input => input.value).join('');
-  }
-
   function checkJoinInputComplete() {
-    const code = getEnteredJoinCode();
+    const code = Array.from(joinDigits).map(i => i.value).join('');
     btnJoinRoom.disabled = code.length !== 4;
   }
 
@@ -476,56 +511,67 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playClick();
     try {
       const text = await navigator.clipboard.readText();
-      fillJoinCode(text);
-      showToast('Code pasted!');
-    } catch (err) {
+      const digits = text.replace(/\D/g, '').slice(0, 4).split('');
+      if (digits.length === 4) {
+        digits.forEach((d, i) => {
+          if (joinDigits[i]) joinDigits[i].value = d;
+        });
+        checkJoinInputComplete();
+        showToast('Code pasted!');
+      } else {
+        showToast('No 4-digit code found in clipboard');
+      }
+    } catch (e) {
       showToast('Could not access clipboard');
     }
   });
 
-  // Join Room Action
   btnJoinRoom.addEventListener('click', () => {
-    sound.playClick();
-    const code = getEnteredJoinCode();
+    const code = Array.from(joinDigits).map(i => i.value).join('');
     if (code.length !== 4) return;
 
+    sound.playClick();
     btnJoinRoom.disabled = true;
+    joinStatusPill.style.display = 'flex';
     joinStatusPill.className = 'status-pill';
-    joinStatusPill.textContent = 'Connecting to room ' + code + '...';
+    joinStatusPill.textContent = 'Connecting to room #' + code + '...';
 
     mp.joinRoom(code)
       .then(() => {
         joinStatusPill.className = 'status-pill success';
-        joinStatusPill.textContent = 'Connected! Entering game...';
+        joinStatusPill.textContent = 'Connected! Starting...';
       })
-      .catch(err => {
+      .catch((err) => {
         btnJoinRoom.disabled = false;
         joinStatusPill.className = 'status-pill error';
-        joinStatusPill.textContent = err.message || 'Room not found. Check 4-digit code.';
+        joinStatusPill.textContent = err.message || 'Room not found. Check code.';
       });
   });
 
-  // Check URL Params for instant join (e.g., opened via QR code or shared link)
-  function checkUrlParams() {
-    const params = new URLSearchParams(window.location.search);
-    const joinCode = params.get('join');
-    if (joinCode && joinCode.length === 4) {
-      openModal(modals.multiplayer);
-      tabBtnJoin.click();
-      fillJoinCode(joinCode);
-      setTimeout(() => {
-        btnJoinRoom.click();
-      }, 500);
-    }
+  // URL Query Auto-Join
+  const urlParams = new URLSearchParams(window.location.search);
+  const autoJoinCode = urlParams.get('join');
+  if (autoJoinCode && autoJoinCode.length === 4) {
+    openModal(modals.multiplayer);
+    tabBtnJoin.click();
+    autoJoinCode.split('').forEach((d, i) => {
+      if (joinDigits[i]) joinDigits[i].value = d;
+    });
+    checkJoinInputComplete();
+    setTimeout(() => {
+      btnJoinRoom.click();
+    }, 400);
   }
-  checkUrlParams();
 
-  // Multiplayer Engine Event Listeners
+  /* ==========================================================================
+     MULTIPLAYER PROTOCOL EVENTS
+     ========================================================================== */
   mp.on('game_ready', (data) => {
     closeModal(modals.multiplayer);
-    showToast('Match connected! Good luck!');
+    showToast(`Online Match Ready! (${data.gridSize || 3}x${data.gridSize || 3})`);
     startMatch('online', {
-      isOnlineHost: mp.isHost
+      isOnlineHost: mp.isHost,
+      gridSize: data.gridSize || 3
     });
   });
 
@@ -534,9 +580,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   mp.on('opponent_disconnected', () => {
-    showToast('Opponent disconnected from room');
-    if (game.gameMode === 'online' && !game.isGameOver) {
-      gameoverIcon.className = 'winner-icon-bubble draw';
+    showToast('Opponent disconnected!');
+    if (screens.game.classList.contains('active')) {
       gameoverIcon.textContent = '⚠️';
       gameoverTitle.textContent = 'Opponent Left';
       gameoverDesc.textContent = 'Your opponent disconnected from the match.';
@@ -548,7 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
   mp.on('rematch_requested', () => {
     showToast('Opponent wants a rematch!');
     if (onlineRematchRequestedByMe) {
-      // Both clicked rematch!
       mp.sendRematchAccept('X');
       resetRoundForNewGame();
     } else {
@@ -565,40 +609,285 @@ document.addEventListener('DOMContentLoaded', () => {
     triggerFloatingEmoji(data.emoji, false);
   });
 
-  /* ==========================================================================
-     GAME ARENA LOGIC & RENDERING
-     ========================================================================== */
+  // Incoming Opponent Voice Note
+  mp.on('opponent_voice_note', (data) => {
+    sound.vibrate([40, 30, 40]);
+    addVoiceNoteToChat(data.audio, data.duration, false);
 
+    // Auto-play opponent's voice note
+    mp.playAudioDataUrl(data.audio);
+
+    // If chat drawer is closed, show floating player banner
+    if (!chatDrawer.classList.contains('active')) {
+      unreadCount++;
+      unreadChatBadge.textContent = unreadCount;
+      unreadChatBadge.style.display = 'flex';
+      showFloatingCommBanner('🎤', `Voice Note from Opponent (${data.duration}s)`, true, (data.duration || 3) * 1000 + 500);
+    }
+  });
+
+  // Incoming Opponent Text Message
+  mp.on('opponent_chat_text', (data) => {
+    sound.playClick();
+    sound.vibrate(30);
+    addTextToChat(data.text, false);
+
+    if (!chatDrawer.classList.contains('active')) {
+      unreadCount++;
+      unreadChatBadge.textContent = unreadCount;
+      unreadChatBadge.style.display = 'flex';
+      showFloatingCommBanner('💬', `${data.sender}: ${data.text}`, false, 3500);
+    }
+  });
+
+  /* ==========================================================================
+     PUSH-TO-TALK VOICE CHAT CONTROLLER
+     ========================================================================== */
+  async function startPtt() {
+    if (isPttActive) return;
+    if (game.gameMode !== 'online' || !mp.isConnected) {
+      showToast('Voice chat is available in online multiplayer!');
+      return;
+    }
+
+    isPttActive = true;
+    const ok = await mp.startVoiceRecording();
+    if (!ok) {
+      isPttActive = false;
+      showToast('Microphone access needed for Voice Chat');
+      return;
+    }
+
+    sound.vibrate(30);
+    btnPushToTalk.classList.add('recording');
+    pttLabel.textContent = 'Speaking...';
+    recordingToast.style.display = 'flex';
+    recDuration.textContent = '0:00';
+
+    const startT = Date.now();
+    clearInterval(recTimerInterval);
+    recTimerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startT) / 1000);
+      const m = Math.floor(elapsed / 60);
+      const s = elapsed % 60;
+      recDuration.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+      if (elapsed >= 15) { // Auto-stop at 15s max
+        stopPtt();
+      }
+    }, 250);
+  }
+
+  async function stopPtt() {
+    if (!isPttActive) return;
+    isPttActive = false;
+    clearInterval(recTimerInterval);
+    btnPushToTalk.classList.remove('recording');
+    pttLabel.textContent = 'Hold to Talk';
+    recordingToast.style.display = 'none';
+
+    const voiceNote = await mp.stopVoiceRecording();
+    if (voiceNote) {
+      sound.vibrate(25);
+      mp.sendVoiceNote(voiceNote.dataUrl, voiceNote.duration);
+      addVoiceNoteToChat(voiceNote.dataUrl, voiceNote.duration, true);
+      showToast('🎤 Voice note sent!');
+    }
+  }
+
+  // Push-to-Talk Mouse & Touch event listeners
+  btnPushToTalk.addEventListener('mousedown', (e) => { e.preventDefault(); startPtt(); });
+  window.addEventListener('mouseup', () => { if (isPttActive) stopPtt(); });
+
+  btnPushToTalk.addEventListener('touchstart', (e) => { e.preventDefault(); startPtt(); }, { passive: false });
+  btnPushToTalk.addEventListener('touchend', (e) => { e.preventDefault(); stopPtt(); }, { passive: false });
+  btnPushToTalk.addEventListener('touchcancel', () => { stopPtt(); });
+
+  /* ==========================================================================
+     TEXT CHAT DRAWER CONTROLLER
+     ========================================================================== */
+  btnToggleChat.addEventListener('click', () => {
+    sound.playClick();
+    chatDrawer.classList.toggle('active');
+    if (chatDrawer.classList.contains('active')) {
+      unreadCount = 0;
+      unreadChatBadge.style.display = 'none';
+      setTimeout(() => chatInputText.focus(), 150);
+    }
+  });
+
+  btnCloseChat.addEventListener('click', () => {
+    sound.playClick();
+    chatDrawer.classList.remove('active');
+  });
+
+  chatInputForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const txt = chatInputText.value.trim();
+    if (!txt) return;
+
+    const sent = mp.sendChatText(txt);
+    if (sent) {
+      addTextToChat(sent.text, true);
+      chatInputText.value = '';
+    }
+  });
+
+  function addTextToChat(text, isMine) {
+    const row = document.createElement('div');
+    row.className = `chat-msg-row ${isMine ? 'mine' : 'opponent'}`;
+
+    const safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    row.innerHTML = `
+      <div class="chat-msg-bubble">${safeText}</div>
+      <span class="chat-msg-meta">${isMine ? 'You' : 'Opponent'}</span>
+    `;
+
+    chatMessagesList.appendChild(row);
+    chatMessagesList.scrollTop = chatMessagesList.scrollHeight;
+  }
+
+  function addVoiceNoteToChat(dataUrl, durationSec, isMine) {
+    const row = document.createElement('div');
+    row.className = `chat-msg-row ${isMine ? 'mine' : 'opponent'}`;
+
+    const durFormatted = `0:${durationSec < 10 ? '0' : ''}${durationSec}`;
+
+    row.innerHTML = `
+      <div class="voice-note-bubble">
+        <button type="button" class="voice-play-btn" aria-label="Play Voice Note">
+          <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        </button>
+        <div class="voice-wave-bars">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <span class="voice-duration-text">${durFormatted}</span>
+      </div>
+      <span class="chat-msg-meta">${isMine ? 'You' : 'Opponent'} • Voice Note</span>
+    `;
+
+    const playBtn = row.querySelector('.voice-play-btn');
+    const bubble = row.querySelector('.voice-note-bubble');
+    let audioInstance = null;
+
+    playBtn.addEventListener('click', () => {
+      sound.playClick();
+      if (audioInstance && !audioInstance.paused) {
+        audioInstance.pause();
+        audioInstance.currentTime = 0;
+        bubble.classList.remove('playing');
+        playBtn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+      } else {
+        bubble.classList.add('playing');
+        playBtn.innerHTML = `<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
+        audioInstance = new Audio(dataUrl);
+        audioInstance.play().catch(() => {});
+        audioInstance.onended = () => {
+          bubble.classList.remove('playing');
+          playBtn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+        };
+      }
+    });
+
+    chatMessagesList.appendChild(row);
+    chatMessagesList.scrollTop = chatMessagesList.scrollHeight;
+  }
+
+  function showFloatingCommBanner(icon, contentText, isAudio, durationMs = 3500) {
+    bannerIconBubble.textContent = icon;
+    bannerAuthor.textContent = isAudio ? 'Voice Note' : 'Chat Message';
+    bannerContent.textContent = contentText;
+    bannerAudioWaves.style.display = isAudio ? 'flex' : 'none';
+    floatingCommBanner.style.display = 'flex';
+
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => {
+      floatingCommBanner.style.display = 'none';
+    }, durationMs);
+  }
+
+  floatingCommBanner.addEventListener('click', () => {
+    sound.playClick();
+    floatingCommBanner.style.display = 'none';
+    chatDrawer.classList.add('active');
+    unreadCount = 0;
+    unreadChatBadge.style.display = 'none';
+  });
+
+  // Reaction Tray Toggle
+  btnToggleReactions.addEventListener('click', () => {
+    sound.playClick();
+    reactionBar.style.display = reactionBar.style.display === 'none' ? 'flex' : 'none';
+  });
+
+  reactionButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const emoji = btn.dataset.emoji;
+      triggerFloatingEmoji(emoji, true);
+      if (game.gameMode === 'online') {
+        mp.sendReaction(emoji);
+      }
+    });
+  });
+
+  function triggerFloatingEmoji(emoji, isOwn = true) {
+    sound.playClick();
+    const el = document.createElement('div');
+    el.className = 'floating-emoji';
+    el.textContent = emoji;
+    el.style.left = `${30 + Math.random() * 40}%`;
+    floatingEmojisContainer.appendChild(el);
+    setTimeout(() => el.remove(), 2100);
+  }
+
+  /* ==========================================================================
+     GAME ARENA LOGIC & DYNAMIC BOARD RENDERING
+     ========================================================================== */
   function startMatch(mode, options = {}) {
     game.startNewGame({
       mode,
       aiDifficulty: options.aiDifficulty,
       humanSymbol: options.humanSymbol,
-      isOnlineHost: options.isOnlineHost
+      isOnlineHost: options.isOnlineHost,
+      gridSize: options.gridSize || selectedPlayGridSize
     });
 
     // Update Mode Badge
+    const gridLabel = `${game.gridSize}x${game.gridSize}`;
+    const winTarget = `${game.winLength} in a row`;
     if (mode === 'local') {
-      modeBadge.textContent = 'Pass & Play';
+      modeBadge.textContent = `Pass & Play • ${gridLabel} (${winTarget})`;
+      mpCommBar.style.display = 'none';
       reactionBar.style.display = 'none';
     } else if (mode === 'ai') {
-      modeBadge.textContent = `VS AI (${options.aiDifficulty.toUpperCase()})`;
+      modeBadge.textContent = `VS AI (${options.aiDifficulty.toUpperCase()}) • ${gridLabel}`;
+      mpCommBar.style.display = 'none';
       reactionBar.style.display = 'none';
     } else if (mode === 'online') {
-      modeBadge.textContent = `Online Room #${mp.roomCode}`;
-      reactionBar.style.display = 'flex';
+      modeBadge.textContent = `Room #${mp.roomCode} • ${gridLabel}`;
+      mpCommBar.style.display = 'flex';
+      reactionBar.style.display = 'none';
     }
 
-    // Update Names
+    // Reset Chat State
+    unreadCount = 0;
+    unreadChatBadge.style.display = 'none';
+    chatMessagesList.innerHTML = `
+      <div class="chat-system-bubble">
+        👋 Match started! ${gridLabel} grid (${winTarget} to win).
+      </div>
+    `;
+
+    // Update Player Names
     playerXNameEl.textContent = game.playerXName;
     playerONameEl.textContent = game.playerOName;
 
-    // Reset scores display
+    // Reset score indicators
     scoreXEl.textContent = game.scores.X;
     scoreOEl.textContent = game.scores.O;
     scoreTiesEl.textContent = game.scores.ties;
 
-    // Clear board UI
+    // Build & Render Board
+    buildBoardDom();
     renderBoard();
     updateTurnDisplay();
 
@@ -610,9 +899,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function buildBoardDom() {
+    gameBoard.innerHTML = '';
+    boardWrapper.className = `board-wrapper grid-size-${game.gridSize}`;
+    const total = game.gridSize * game.gridSize;
+
+    for (let i = 0; i < total; i++) {
+      const cell = document.createElement('button');
+      cell.className = 'board-cell';
+      cell.dataset.cell = i;
+      cell.setAttribute('aria-label', `Cell ${i + 1}`);
+      cell.addEventListener('click', () => handleCellClick(i));
+      gameBoard.appendChild(cell);
+    }
+  }
+
   function renderBoard() {
     strikeOverlay.innerHTML = '';
-    boardCells.forEach((cell, idx) => {
+    const cells = gameBoard.querySelectorAll('.board-cell');
+    cells.forEach((cell, idx) => {
       cell.className = 'board-cell';
       cell.innerHTML = '';
       const val = game.board[idx];
@@ -655,47 +960,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (game.gameMode === 'ai') {
       if (game.currentTurn === game.humanSymbol) {
-        turnBanner.textContent = "Your Turn (" + game.humanSymbol + ")";
+        turnBanner.textContent = `Your Turn (${game.humanSymbol})`;
       } else {
-        turnBanner.textContent = "AI is thinking...";
+        turnBanner.textContent = "AI is calculating...";
       }
     } else if (game.gameMode === 'online') {
       if (game.currentTurn === mp.mySymbol) {
-        turnBanner.textContent = "Your Turn (" + mp.mySymbol + ")";
+        turnBanner.textContent = `Your Turn (${mp.mySymbol})`;
       } else {
-        turnBanner.textContent = "Opponent's Turn (" + mp.opponentSymbol + ")";
+        turnBanner.textContent = `Opponent's Turn (${mp.opponentSymbol})`;
       }
     } else {
       turnBanner.textContent = `Player ${game.currentTurn}'s Turn`;
     }
   }
 
-  // Handle cell click
-  boardCells.forEach((cell, idx) => {
-    cell.addEventListener('click', () => {
-      handleCellClick(idx);
-    });
-  });
-
   function handleCellClick(index) {
     if (game.isGameOver) return;
     if (game.board[index] !== null) return;
 
-    // In AI mode, ignore click if it's AI's turn or AI is calculating
     if (game.gameMode === 'ai' && (game.currentTurn !== game.humanSymbol || isAiThinking)) {
       return;
     }
 
-    // In Online mode, ignore click if it's not our turn
     if (game.gameMode === 'online' && game.currentTurn !== mp.mySymbol) {
       showToast("Wait for opponent's move!");
       return;
     }
 
-    // Execute Move
     executeMove(index);
 
-    // If online, broadcast to opponent
     if (game.gameMode === 'online') {
       mp.sendMove(index, mp.mySymbol);
     }
@@ -711,17 +1005,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const result = game.makeMove(index);
     if (!result.success) return;
 
-    // Haptic & Sound
+    // Sound & Haptic
     sound.vibrate(25);
     if (symbol === 'X') sound.playXMove();
     else sound.playOMove();
 
     // Render tile with GPU spring pop
-    const cell = boardCells[index];
-    cell.classList.remove('cell-placed');
-    void cell.offsetWidth;
-    cell.classList.add('taken', 'cell-placed');
-    cell.appendChild(createSymbolSvg(symbol));
+    const cells = gameBoard.querySelectorAll('.board-cell');
+    const cell = cells[index];
+    if (cell) {
+      cell.classList.remove('cell-placed');
+      void cell.offsetWidth;
+      cell.classList.add('taken', 'cell-placed');
+      cell.appendChild(createSymbolSvg(symbol));
+    }
 
     // Update Scores
     scoreXEl.textContent = game.scores.X;
@@ -741,7 +1038,6 @@ document.addEventListener('DOMContentLoaded', () => {
       handleGameTie();
     } else {
       updateTurnDisplay();
-      // If AI mode and it's now AI's turn
       if (game.gameMode === 'ai' && game.currentTurn === game.aiSymbol) {
         triggerAiMove();
       }
@@ -752,14 +1048,22 @@ document.addEventListener('DOMContentLoaded', () => {
     isAiThinking = true;
     updateTurnDisplay();
 
-    // Subtle natural reaction delay
-    const delay = Math.floor(350 + Math.random() * 250);
+    const delay = Math.floor(300 + Math.random() * 200);
     setTimeout(() => {
       if (game.isGameOver) {
         isAiThinking = false;
         return;
       }
-      const bestMove = ai.getBestMove(game.board, game.aiSymbol, game.humanSymbol, game.aiDifficulty);
+
+      const bestMove = ai.getBestMove(
+        game.board,
+        game.aiSymbol,
+        game.humanSymbol,
+        game.aiDifficulty,
+        game.gridSize,
+        game.winLength
+      );
+
       isAiThinking = false;
       if (bestMove !== null && game.board[bestMove] === null) {
         executeMove(bestMove);
@@ -767,11 +1071,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }, delay);
   }
 
-  // Draw Dynamic Winning Strike Line
   function drawStrikeLine(pattern, winner) {
-    const cellA = boardCells[pattern[0]];
-    const cellC = boardCells[pattern[2]];
-    const boardRect = document.querySelector('.game-board').getBoundingClientRect();
+    const cells = gameBoard.querySelectorAll('.board-cell');
+    const cellA = cells[pattern[0]];
+    const cellC = cells[pattern[pattern.length - 1]];
+    const boardRect = gameBoard.getBoundingClientRect();
 
     const rectA = cellA.getBoundingClientRect();
     const rectC = cellC.getBoundingClientRect();
@@ -789,11 +1093,10 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     pattern.forEach(idx => {
-      boardCells[idx].classList.add('winning-cell');
+      if (cells[idx]) cells[idx].classList.add('winning-cell');
     });
   }
 
-  // Celebratory Confetti Burst
   function fireConfetti() {
     if (typeof confetti === 'function') {
       confetti({
@@ -816,12 +1119,12 @@ document.addEventListener('DOMContentLoaded', () => {
       gameoverIcon.textContent = winner;
 
       let title = `Player ${winner} Wins!`;
-      let desc = `Connected 3 in a row!`;
+      let desc = `Connected ${game.winLength} in a row!`;
 
       if (game.gameMode === 'ai') {
         if (winner === game.humanSymbol) {
           title = 'You Won! 🎉';
-          desc = 'Spectacular victory against AI!';
+          desc = `Spectacular victory on ${game.gridSize}x${game.gridSize}!`;
         } else {
           title = 'AI Won!';
           desc = 'Better luck next round!';
@@ -832,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', () => {
           desc = 'You defeated your online opponent!';
         } else {
           title = 'Defeat';
-          desc = 'Opponent connected 3 in a row.';
+          desc = 'Opponent connected in a row.';
         }
       }
 
@@ -855,22 +1158,22 @@ document.addEventListener('DOMContentLoaded', () => {
       gameoverIcon.className = 'winner-icon-bubble draw';
       gameoverIcon.textContent = '=';
       gameoverTitle.textContent = "It's a Draw!";
-      gameoverDesc.textContent = 'A hard-fought stalemate with no open moves.';
+      gameoverDesc.textContent = `A hard-fought stalemate on ${game.gridSize}x${game.gridSize}.`;
       btnRematch.style.display = 'block';
       btnRematch.textContent = 'Play Again';
       btnRematch.classList.remove('pulse');
       onlineRematchRequestedByMe = false;
 
       openModal(modals.gameover);
-    }, 800);
+    }, 1000);
   }
 
-  // Rematch / Next Round
   function resetRoundForNewGame() {
-    closeModal(modals.gameover);
     game.resetRound();
     renderBoard();
     updateTurnDisplay();
+    closeModal(modals.gameover);
+    showToast(`New Round Started! (${game.gridSize}x${game.gridSize})`);
 
     if (game.gameMode === 'ai' && game.currentTurn === game.aiSymbol) {
       triggerAiMove();
@@ -882,7 +1185,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (game.gameMode === 'online') {
       onlineRematchRequestedByMe = true;
       btnRematch.textContent = 'Waiting for opponent...';
-      btnRematch.disabled = true;
       mp.sendRematchRequest();
       showToast('Rematch request sent to opponent!');
     } else {
@@ -899,7 +1201,6 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('menu');
   });
 
-  // Game Arena Controls (Back / Reset / Leave)
   btnBackMenu.addEventListener('click', () => {
     sound.playClick();
     if (game.gameMode === 'online') {
@@ -915,7 +1216,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btnRestartGame.addEventListener('click', () => {
     sound.playClick();
     if (game.gameMode === 'online') {
-      showToast('Click Rematch to sync with opponent');
+      showToast('Click Rematch after the round ends');
     } else {
       resetRoundForNewGame();
     }
@@ -924,34 +1225,4 @@ document.addEventListener('DOMContentLoaded', () => {
   btnLeaveGame.addEventListener('click', () => {
     btnBackMenu.click();
   });
-
-  // Emoji Reactions (Online mode)
-  reactionButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const emoji = btn.dataset.emoji || btn.textContent.trim();
-      sound.playReaction();
-      triggerFloatingEmoji(emoji, true);
-
-      if (game.gameMode === 'online') {
-        mp.sendReaction(emoji);
-      }
-    });
-  });
-
-  function triggerFloatingEmoji(emoji, isMine) {
-    const el = document.createElement('div');
-    el.className = 'floating-emoji';
-    el.textContent = emoji;
-
-    // Stagger horizontal position
-    const minLeft = isMine ? 25 : 55;
-    const maxLeft = isMine ? 45 : 75;
-    const leftPercent = Math.floor(minLeft + Math.random() * (maxLeft - minLeft));
-    el.style.left = `${leftPercent}%`;
-
-    floatingEmojisContainer.appendChild(el);
-    setTimeout(() => {
-      el.remove();
-    }, 2300);
-  }
 });

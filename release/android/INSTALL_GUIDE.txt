@@ -1,7 +1,10 @@
-OX NEON - ANDROID APK INSTALL GUIDE
-====================================
-1. Transfer OX_Neon_Game.apk to your Android phone via WhatsApp, Telegram, Google Drive, or USB cable.
-2. Tap the APK file to install.
-   - If you already have Version 1, Android will show "Do you want to update this app?". Tap "Update".
+OX NEON v2.0 - ANDROID APK INSTALL GUIDE
+========================================
+1. Choose your APK:
+   - OX_Neon_Game_v2.apk (Recommended: Voice Chat, Text Chat, 3x3, 5x5, 10x10 grids, ~231 KB)
+   - OX_Neon_Game_v1.apk (Classic 3x3 edition preserved, ~223 KB)
+2. Transfer to your Android phone via WhatsApp, Telegram, Google Drive, or USB cable.
+3. Tap the APK file to install:
+   - If updating from v1, tap "Update". Your settings and scores are preserved.
    - If installing for the first time, allow "Install unknown apps" when prompted.
-3. Open OX Neon and enjoy smooth 60-120 FPS offline & online multiplayer!
+4. Voice Chat: When playing Multiplayer online, hold the Mic button at the bottom to send voice notes!

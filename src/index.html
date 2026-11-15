@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>OX NEON - Modern Tic-Tac-Toe</title>
-  <meta name="description" content="Modern clean Tic-Tac-Toe (O,X) game with glowing gradients, AI, Pass & Play, and 4-digit code online multiplayer.">
-  <meta name="theme-color" content="#0a0d14">
+  <title>OX NEON - Modern Tic-Tac-Toe v2.0</title>
+  <meta name="description" content="Modern clean Tic-Tac-Toe (O,X) with 3x3, 5x5, 10x10 grids, Push-to-Talk Voice Chat, Text Chat, and AI.">
+  <meta name="theme-color" content="#070a12">
 
   <!-- Google Fonts: Outfit & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +26,6 @@
   <div class="ambient-bg">
     <div class="ambient-orb orb-1"></div>
     <div class="ambient-orb orb-2"></div>
-    <div class="ambient-orb orb-3"></div>
     <div class="ambient-grid"></div>
   </div>
 
@@ -35,6 +34,21 @@
 
   <!-- Floating Emoji Animation Container -->
   <div id="floating-emojis" class="floating-emojis-container"></div>
+
+  <!-- Floating Audio & Chat Notification Banner -->
+  <div id="floating-comm-banner" class="floating-comm-banner" style="display: none;">
+    <div class="banner-icon-bubble" id="banner-icon-bubble">💬</div>
+    <div class="banner-text-group">
+      <span id="banner-author" class="banner-author">Opponent</span>
+      <span id="banner-content" class="banner-content">Incoming message...</span>
+    </div>
+    <div id="banner-audio-waves" class="audio-waves" style="display: none;">
+      <span class="wave-bar"></span>
+      <span class="wave-bar"></span>
+      <span class="wave-bar"></span>
+      <span class="wave-bar"></span>
+    </div>
+  </div>
 
   <!-- Main Application Wrapper -->
   <div class="app-container">
@@ -45,7 +59,7 @@
         <div class="brand-icon">
           <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
         </div>
-        <span class="brand-name">OX NEON</span>
+        <span class="brand-name">OX NEON <span class="v2-tag">v2</span></span>
       </div>
       <div class="nav-actions">
         <button id="btn-sound" class="icon-btn" title="Toggle Sound" aria-label="Toggle Sound">
@@ -69,7 +83,7 @@
           <div class="big-symbol o-symbol">○</div>
         </div>
         <h1 class="hero-title">TIC • TAC • TOE</h1>
-        <p class="hero-subtitle">Modern Clean Edition</p>
+        <p class="hero-subtitle">Modern Clean Edition • 3x3 • 5x5 • 10x10</p>
       </section>
 
       <!-- Three Main Menu Action Buttons -->
@@ -83,7 +97,7 @@
             </div>
             <div class="btn-texts">
               <span class="btn-title">PLAY</span>
-              <span class="btn-desc">Pass & Play or Play vs AI</span>
+              <span class="btn-desc">Pass & Play or Play vs AI (Choose Grid)</span>
             </div>
           </div>
           <div class="btn-arrow">
@@ -99,7 +113,7 @@
             </div>
             <div class="btn-texts">
               <span class="btn-title">MULTIPLAYER</span>
-              <span class="btn-desc">4-Digit Code • Play Online Across Phones</span>
+              <span class="btn-desc">4-Digit Code • Voice & Text Chat</span>
             </div>
           </div>
           <div class="btn-arrow">
@@ -153,7 +167,7 @@
         <button id="btn-back-menu" class="icon-btn" title="Back to Menu" aria-label="Back to Menu">
           <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
         </button>
-        <div id="mode-badge" class="round-pill-badge">Pass & Play</div>
+        <div id="mode-badge" class="round-pill-badge">Pass & Play • 3x3</div>
         <button id="btn-restart-game" class="icon-btn" title="Restart Board" aria-label="Restart Board">
           <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
         </button>
@@ -193,24 +207,50 @@
         Player X's Turn
       </div>
 
-      <!-- 3x3 Tic-Tac-Toe Board Container -->
-      <div class="board-wrapper">
-        <div class="game-board">
-          <button class="board-cell" data-cell="0" aria-label="Cell 1"></button>
-          <button class="board-cell" data-cell="1" aria-label="Cell 2"></button>
-          <button class="board-cell" data-cell="2" aria-label="Cell 3"></button>
-          <button class="board-cell" data-cell="3" aria-label="Cell 4"></button>
-          <button class="board-cell" data-cell="4" aria-label="Cell 5"></button>
-          <button class="board-cell" data-cell="5" aria-label="Cell 6"></button>
-          <button class="board-cell" data-cell="6" aria-label="Cell 7"></button>
-          <button class="board-cell" data-cell="7" aria-label="Cell 8"></button>
-          <button class="board-cell" data-cell="8" aria-label="Cell 9"></button>
+      <!-- Dynamic Board Container (3x3, 5x5, 10x10) -->
+      <div id="board-wrapper" class="board-wrapper grid-size-3">
+        <div id="game-board" class="game-board">
+          <!-- Dynamically populated cells -->
         </div>
         <!-- Dynamic Winning Strike Line SVG Overlay -->
         <div id="strike-overlay" class="strike-svg-overlay"></div>
       </div>
 
-      <!-- Live Online Reactions Bar -->
+      <!-- MULTIPLAYER COMMUNICATION BAR (Voice Mic + Chat + Reactions) -->
+      <div id="mp-comm-bar" class="mp-comm-bar" style="display: none;">
+        <!-- Toggle Chat Button with Unread Badge -->
+        <button id="btn-toggle-chat" class="comm-action-btn btn-chat-trigger" type="button" title="Chat with Opponent">
+          <div class="btn-icon-wrap">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span id="unread-chat-badge" class="badge-unread" style="display: none;">0</span>
+          </div>
+          <span class="btn-label">Chat</span>
+        </button>
+
+        <!-- Push-To-Talk Voice Mic Button -->
+        <div class="ptt-mic-container">
+          <button id="btn-push-to-talk" class="comm-action-btn btn-ptt-mic" type="button" title="Hold to Speak">
+            <div class="mic-circle-glow">
+              <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </div>
+            <span id="ptt-label" class="btn-label">Hold to Talk</span>
+          </button>
+          <!-- Active Recording Tooltip / Indicator -->
+          <div id="recording-toast" class="recording-toast" style="display: none;">
+            <span class="pulse-red-dot"></span>
+            <span class="rec-title">Recording Voice Note...</span>
+            <span id="rec-duration" class="rec-timer">0:00</span>
+          </div>
+        </div>
+
+        <!-- Emoji Reactions Trigger -->
+        <button id="btn-toggle-reactions" class="comm-action-btn btn-react-trigger" type="button" title="Send Reaction">
+          <span class="emoji-icon">🔥</span>
+          <span class="btn-label">React</span>
+        </button>
+      </div>
+
+      <!-- Emoji Reactions Popout Tray -->
       <div id="reaction-bar" class="reaction-bar" style="display: none;">
         <button class="reaction-btn" data-emoji="🔥">🔥</button>
         <button class="reaction-btn" data-emoji="👏">👏</button>
@@ -233,7 +273,40 @@
   </div>
 
   <!-- ====================================================================
-       MODAL 1: PLAY MODE SELECTION (Pass & Play vs AI)
+       MULTIPLAYER CHAT DRAWER (Slide-Up Glass Drawer)
+       ==================================================================== -->
+  <div id="chat-drawer" class="chat-drawer">
+    <div class="chat-drawer-header">
+      <div class="chat-title-info">
+        <div class="chat-header-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </div>
+        <div>
+          <h3 class="chat-title">Live Match Chat</h3>
+          <span class="chat-status-sub">Voice & Text Messages</span>
+        </div>
+      </div>
+      <button id="btn-close-chat" class="modal-close-btn" aria-label="Close Chat">✕</button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="chat-messages-list" class="chat-messages-list">
+      <div class="chat-system-bubble">
+        👋 Welcome to the match! Type messages or hold the mic to send voice notes.
+      </div>
+    </div>
+
+    <!-- Chat Form -->
+    <form id="chat-input-form" class="chat-input-form">
+      <input id="chat-input-text" type="text" placeholder="Type a message..." maxlength="120" autocomplete="off" />
+      <button id="btn-chat-send" type="submit" class="chat-send-btn" title="Send Message">
+        <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </form>
+  </div>
+
+  <!-- ====================================================================
+       MODAL 1: PLAY MODE SELECTION (Pass & Play vs AI + Grid Picker)
        ==================================================================== -->
   <div id="modal-play-select" class="modal-overlay">
     <div class="modal-content">
@@ -245,6 +318,25 @@
         <button class="modal-close-btn" aria-label="Close modal">✕</button>
       </div>
 
+      <!-- Grid Size Selection Pills -->
+      <div class="grid-select-group">
+        <span class="config-label">Select Board Grid Size</span>
+        <div class="grid-pill-row" id="play-grid-pills">
+          <button class="grid-size-pill active" data-grid="3">
+            <span class="pill-big">3x3</span>
+            <span class="pill-small">3 in a row</span>
+          </button>
+          <button class="grid-size-pill" data-grid="5">
+            <span class="pill-big">5x5</span>
+            <span class="pill-small">4 in a row</span>
+          </button>
+          <button class="grid-size-pill" data-grid="10">
+            <span class="pill-big">10x10</span>
+            <span class="pill-small">5 in a row</span>
+          </button>
+        </div>
+      </div>
+
       <div class="mode-options-grid">
         <!-- Local 2-Player -->
         <div id="btn-mode-local" class="mode-option-card">
@@ -253,7 +345,7 @@
           </div>
           <div class="btn-texts">
             <span class="btn-title">Pass & Play (Local 2P)</span>
-            <span class="btn-desc">Two players on this device</span>
+            <span class="btn-desc">Play locally on this device</span>
           </div>
         </div>
 
@@ -271,7 +363,7 @@
 
       <!-- AI Configuration Accordion Panel -->
       <div id="ai-config-panel" class="ai-config-panel">
-        <span class="config-label">Select Difficulty</span>
+        <span class="config-label">Select AI Difficulty</span>
         <div class="difficulty-pill-group">
           <button class="diff-pill" data-diff="easy">Easy</button>
           <button class="diff-pill" data-diff="medium">Medium</button>
@@ -304,7 +396,7 @@
   </div>
 
   <!-- ====================================================================
-       MODAL 2: MULTIPLAYER HUB (Generate 4-Digit Code or Enter Code)
+       MODAL 2: MULTIPLAYER HUB (Host with Grid Choice or Join Room)
        ==================================================================== -->
   <div id="modal-multiplayer" class="modal-overlay">
     <div class="modal-content">
@@ -322,10 +414,29 @@
         <button id="tab-btn-join" class="tab-btn">Join with Code</button>
       </div>
 
-      <!-- TAB 1: HOST ROOM (Shows 4-Digit Code) -->
+      <!-- TAB 1: HOST ROOM -->
       <div id="tab-pane-host" class="tab-pane active">
-        <p style="font-size: 0.88rem; color: var(--text-muted); text-align: center;">
-          Share this <strong>4-digit code</strong> with a friend or open on your other phone to play online!
+        <!-- Host Board Size Selection -->
+        <div class="grid-select-group" style="margin-bottom: 12px;">
+          <span class="config-label">Room Board Size</span>
+          <div class="grid-pill-row" id="host-grid-pills">
+            <button class="grid-size-pill active" data-host-grid="3">
+              <span class="pill-big">3x3</span>
+              <span class="pill-small">3 in a row</span>
+            </button>
+            <button class="grid-size-pill" data-host-grid="5">
+              <span class="pill-big">5x5</span>
+              <span class="pill-small">4 in a row</span>
+            </button>
+            <button class="grid-size-pill" data-host-grid="10">
+              <span class="pill-big">10x10</span>
+              <span class="pill-small">5 in a row</span>
+            </button>
+          </div>
+        </div>
+
+        <p style="font-size: 0.84rem; color: var(--text-muted); text-align: center;">
+          Share this <strong>4-digit code</strong> with a friend to play live with voice & text chat!
         </p>
 
         <!-- 4-Digit Code Box Container -->
@@ -365,15 +476,15 @@
           <span class="qr-caption">Scan with other phone camera to join instantly</span>
         </div>
 
-        <button id="btn-regen-code" class="secondary-action-btn" style="width: 100%;" type="button">
+        <button id="btn-regen-code" class="secondary-action-btn" style="width: 100%; margin-top: 8px;" type="button">
           Generate New 4-Digit Code
         </button>
       </div>
 
-      <!-- TAB 2: JOIN ROOM (Input 4-Digit Code) -->
+      <!-- TAB 2: JOIN ROOM -->
       <div id="tab-pane-join" class="tab-pane">
         <p style="font-size: 0.88rem; color: var(--text-muted); text-align: center;">
-          Enter or paste the <strong>4-digit code</strong> generated on the other phone:
+          Enter or paste the <strong>4-digit code</strong> generated on the host device:
         </p>
 
         <div class="join-code-form">
@@ -407,7 +518,7 @@
     <div class="modal-content gameover-modal-content">
       <div id="gameover-icon" class="winner-icon-bubble x-won">X</div>
       <h2 id="gameover-title" class="gameover-title">Player X Wins!</h2>
-      <p id="gameover-desc" class="gameover-subtitle">3 in a row connected!</p>
+      <p id="gameover-desc" class="gameover-subtitle">Connected in a row!</p>
 
       <div class="gameover-actions">
         <button id="btn-rematch" class="primary-btn" type="button">Play Again (Rematch)</button>

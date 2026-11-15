@@ -29,18 +29,20 @@ def main():
     if not os.path.exists(index_html):
         index_html = os.path.join(base_dir, 'index.html')
 
-    # Force Edge Chromium GPU acceleration flags for silky-smooth 60-120 FPS
+    # Force Edge Chromium GPU acceleration and Microphone WebRTC flags
     os.environ['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = (
         '--enable-gpu-rasterization '
         '--enable-zero-copy '
         '--ignore-gpu-blocklist '
         '--disable-background-timer-throttling '
-        '--enable-accelerated-2d-canvas'
+        '--enable-accelerated-2d-canvas '
+        '--use-fake-ui-for-media-stream '
+        '--enable-media-stream'
     )
 
     api = WindowApi()
     window = webview.create_window(
-        title='OX Neon - Modern Tic-Tac-Toe',
+        title='OX Neon v2.0 - Modern Tic-Tac-Toe',
         url=index_html,
         width=460,
         height=760,

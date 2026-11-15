@@ -1,6 +1,10 @@
 /**
- * OX NEON - Real-Time P2P WebRTC Multiplayer Engine via PeerJS
- * Connects 2 players across phones or browsers via a 4-digit room code.
+ * OX NEON - Real-Time P2P WebRTC Multiplayer & Communication Engine (Version 2.0)
+ * Features:
+ * - 4-Digit Room Codes (PeerJS)
+ * - Dynamic Grid Size Sync (3x3, 5x5, 10x10)
+ * - Real-Time Push-To-Talk Voice Chat
+ * - Real-Time Text Chat with Unread Notifications
  */
 
 class MultiplayerEngine {
@@ -11,11 +15,20 @@ class MultiplayerEngine {
     this.roomCode = null;
     this.mySymbol = 'X';
     this.opponentSymbol = 'O';
+    this.gridSize = 3;
+    this.winLength = 3;
     this.isConnected = false;
     this.handlers = {};
 
+    // Voice recording states
+    this.mediaRecorder = null;
+    this.audioChunks = [];
+    this.recordingStartTime = 0;
+    this.isRecording = false;
+    this.audioStream = null;
+
     // Backup BroadcastChannel for instant same-browser testing
-    this.bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ox_multiplayer_channel') : null;
+    this.bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ox_multiplayer_channel_v2') : null;
     if (this.bc) {
       this.bc.onmessage = (event) => this.handleBroadcastMessage(event.data);
     }
@@ -31,29 +44,28 @@ class MultiplayerEngine {
     }
   }
 
-  // Generate a random 4-digit numeric code
   generateCode() {
     return Math.floor(1000 + Math.random() * 9000).toString();
   }
 
-  // Convert 4-digit code to PeerJS ID
   getPeerIdFromCode(code) {
-    return `oxgame2026-${code}`;
+    return `oxneonv2-${code}`;
   }
 
-  // Host starts a room with a 4-digit code
-  hostRoom(customCode = null) {
+  // Host starts a room with selected grid size
+  hostRoom(gridSize = 3, customCode = null) {
     return new Promise((resolve, reject) => {
       this.cleanup();
       this.isHost = true;
       this.mySymbol = 'X';
       this.opponentSymbol = 'O';
+      this.gridSize = parseInt(gridSize, 10) || 3;
+      this.winLength = this.gridSize === 10 ? 5 : (this.gridSize === 5 ? 4 : 3);
       this.roomCode = customCode || this.generateCode();
 
       const hostPeerId = this.getPeerIdFromCode(this.roomCode);
 
       try {
-        // Initialize PeerJS with public broker
         this.peer = new Peer(hostPeerId, {
           debug: 1,
           config: {
@@ -65,7 +77,7 @@ class MultiplayerEngine {
         });
 
         this.peer.on('open', (id) => {
-          this.emit('room_created', { code: this.roomCode, peerId: id });
+          this.emit('room_created', { code: this.roomCode, peerId: id, gridSize: this.gridSize });
           resolve(this.roomCode);
         });
 
@@ -77,9 +89,8 @@ class MultiplayerEngine {
         this.peer.on('error', (err) => {
           console.warn('Peer error:', err);
           if (err.type === 'unavailable-id') {
-            // Code already active, retry with new 4-digit code
             const newCode = this.generateCode();
-            this.hostRoom(newCode).then(resolve).catch(reject);
+            this.hostRoom(gridSize, newCode).then(resolve).catch(reject);
           } else {
             this.emit('error', err.message || 'Connection error. Check internet.');
             reject(err);
@@ -105,7 +116,6 @@ class MultiplayerEngine {
       const hostPeerId = this.getPeerIdFromCode(this.roomCode);
 
       try {
-        // Create an ephemeral peer ID for the guest
         this.peer = new Peer({
           debug: 1,
           config: {
@@ -130,7 +140,6 @@ class MultiplayerEngine {
           connection.on('open', () => {
             clearTimeout(timeout);
             this.setupConnection(connection);
-            // Send join notification to host
             this.send({ type: 'guest_joined', code: this.roomCode });
             resolve();
           });
@@ -154,7 +163,6 @@ class MultiplayerEngine {
     });
   }
 
-  // Setup connection event listeners
   setupConnection(connection) {
     this.conn = connection;
     this.isConnected = true;
@@ -162,15 +170,16 @@ class MultiplayerEngine {
     this.conn.on('open', () => {
       this.isConnected = true;
       if (this.isHost) {
-        // Send initial handshake
         this.send({
           type: 'init_game',
           hostSymbol: 'X',
           guestSymbol: 'O',
-          currentTurn: 'X'
+          currentTurn: 'X',
+          gridSize: this.gridSize,
+          winLength: this.winLength
         });
       }
-      this.emit('connected', { isHost: this.isHost, symbol: this.mySymbol });
+      this.emit('connected', { isHost: this.isHost, symbol: this.mySymbol, gridSize: this.gridSize });
     });
 
     this.conn.on('data', (data) => {
@@ -187,14 +196,12 @@ class MultiplayerEngine {
     });
   }
 
-  // Broadcast channel backup for testing between tabs in same browser
   handleBroadcastMessage(data) {
     if (!data || data.roomCode !== this.roomCode) return;
-    if (data.fromHost === this.isHost) return; // Ignore own messages
+    if (data.fromHost === this.isHost) return;
     this.handleIncomingData(data.payload);
   }
 
-  // Handle incoming protocol messages
   handleIncomingData(data) {
     if (!data || !data.type) return;
 
@@ -202,11 +209,23 @@ class MultiplayerEngine {
       case 'init_game':
         this.mySymbol = 'O';
         this.opponentSymbol = 'X';
-        this.emit('game_ready', { mySymbol: this.mySymbol, currentTurn: data.currentTurn });
+        this.gridSize = data.gridSize || 3;
+        this.winLength = data.winLength || 3;
+        this.emit('game_ready', {
+          mySymbol: this.mySymbol,
+          currentTurn: data.currentTurn,
+          gridSize: this.gridSize,
+          winLength: this.winLength
+        });
         break;
 
       case 'guest_joined':
-        this.emit('game_ready', { mySymbol: 'X', currentTurn: 'X' });
+        this.emit('game_ready', {
+          mySymbol: 'X',
+          currentTurn: 'X',
+          gridSize: this.gridSize,
+          winLength: this.winLength
+        });
         break;
 
       case 'move':
@@ -225,13 +244,24 @@ class MultiplayerEngine {
         this.emit('opponent_reaction', { emoji: data.emoji });
         break;
 
-      case 'chat':
-        this.emit('opponent_chat', { text: data.text });
+      case 'chat_text':
+        this.emit('opponent_chat_text', {
+          text: data.text,
+          sender: data.sender || this.opponentSymbol,
+          timestamp: data.timestamp || Date.now()
+        });
+        break;
+
+      case 'voice_note':
+        this.emit('opponent_voice_note', {
+          audio: data.audio,
+          duration: data.duration,
+          sender: data.sender || this.opponentSymbol
+        });
         break;
     }
   }
 
-  // Send packet to opponent
   send(payload) {
     if (this.conn && this.conn.open) {
       try {
@@ -240,7 +270,6 @@ class MultiplayerEngine {
         console.error('Send error:', e);
       }
     }
-    // Also broadcast on local channel if active
     if (this.bc && this.roomCode) {
       this.bc.postMessage({
         roomCode: this.roomCode,
@@ -266,7 +295,135 @@ class MultiplayerEngine {
     this.send({ type: 'reaction', emoji });
   }
 
+  sendChatText(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const msg = {
+      type: 'chat_text',
+      text: trimmed,
+      sender: this.mySymbol,
+      timestamp: Date.now()
+    };
+    this.send(msg);
+    return msg;
+  }
+
+  /* ==========================================================================
+     PUSH-TO-TALK VOICE RECORDING & PLAYBACK ENGINE
+     ========================================================================== */
+  async startVoiceRecording() {
+    if (this.isRecording) return false;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioStream = stream;
+      this.audioChunks = [];
+      this.recordingStartTime = Date.now();
+
+      // Check supported mime types
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : '';
+      }
+
+      const options = mimeType ? { mimeType } : {};
+      this.mediaRecorder = new MediaRecorder(stream, options);
+
+      this.mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          this.audioChunks.push(e.data);
+        }
+      };
+
+      this.mediaRecorder.start(100); // 100ms slices
+      this.isRecording = true;
+      return true;
+    } catch (err) {
+      console.warn('Microphone error:', err);
+      this.emit('mic_error', err.message || 'Microphone access denied.');
+      return false;
+    }
+  }
+
+  stopVoiceRecording() {
+    return new Promise((resolve) => {
+      if (!this.isRecording || !this.mediaRecorder) {
+        resolve(null);
+        return;
+      }
+
+      const duration = Math.max(1, Math.round((Date.now() - this.recordingStartTime) / 1000));
+
+      this.mediaRecorder.onstop = () => {
+        try {
+          const blob = new Blob(this.audioChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64Data = reader.result;
+            // Stop mic tracks to release hardware
+            if (this.audioStream) {
+              this.audioStream.getTracks().forEach(t => t.stop());
+              this.audioStream = null;
+            }
+            this.isRecording = false;
+
+            if (duration < 0.4) {
+              // Too short, disregard click
+              resolve(null);
+            } else {
+              resolve({
+                dataUrl: base64Data,
+                duration: duration
+              });
+            }
+          };
+          reader.readAsDataURL(blob);
+        } catch (e) {
+          this.isRecording = false;
+          resolve(null);
+        }
+      };
+
+      try {
+        this.mediaRecorder.stop();
+      } catch (e) {
+        this.isRecording = false;
+        resolve(null);
+      }
+    });
+  }
+
+  sendVoiceNote(dataUrl, duration) {
+    if (!dataUrl) return;
+    const packet = {
+      type: 'voice_note',
+      audio: dataUrl,
+      duration: duration,
+      sender: this.mySymbol
+    };
+    this.send(packet);
+    return packet;
+  }
+
+  playAudioDataUrl(dataUrl) {
+    try {
+      const audio = new Audio(dataUrl);
+      audio.play().catch(e => console.warn('Audio play prevented:', e));
+      return audio;
+    } catch (e) {
+      return null;
+    }
+  }
+
   cleanup() {
+    if (this.mediaRecorder && this.isRecording) {
+      try { this.mediaRecorder.stop(); } catch (e) {}
+    }
+    if (this.audioStream) {
+      try { this.audioStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+      this.audioStream = null;
+    }
+    this.isRecording = false;
+
     if (this.conn) {
       try { this.conn.close(); } catch (e) {}
       this.conn = null;

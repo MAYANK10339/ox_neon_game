@@ -5,7 +5,7 @@ import zipfile
 from PIL import Image
 
 print("==================================================")
-print("  OX NEON - ULTRA-OPTIMIZED APK (VERSION 3 - UPDATE)")
+print("  OX NEON - ULTRA-OPTIMIZED APK (VERSION 2.0.0)   ")
 print("==================================================")
 
 tools_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,17 +20,19 @@ if os.path.exists(native_dir):
     shutil.rmtree(native_dir)
 os.makedirs(native_dir, exist_ok=True)
 
-# 1. Create AndroidManifest.xml with versionCode="3" and versionName="1.2.0" for direct in-place update!
+# 1. Create AndroidManifest.xml with versionCode="4" and versionName="2.0.0" with Audio Capture Permissions!
 manifest_content = """<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.oxneon.game"
-    android:versionCode="3"
-    android:versionName="1.2.0">
+    android:versionCode="4"
+    android:versionName="2.0.0">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <application
         android:label="OX Neon"
@@ -58,7 +60,7 @@ manifest_content = """<?xml version="1.0" encoding="utf-8"?>
 manifest_file = os.path.join(native_dir, "AndroidManifest.xml")
 with open(manifest_file, "w", encoding="utf-8") as f:
     f.write(manifest_content)
-print("1. AndroidManifest.xml (v3 / update ready) created.")
+print("1. AndroidManifest.xml (v2.0 / audio-enabled) created.")
 
 # 2. Res folder and icons
 res_dir = os.path.join(native_dir, "res")
@@ -124,7 +126,7 @@ if res.returncode != 0:
     raise RuntimeError("aapt2 link failed")
 print("4. Resources linked by aapt2 into base APK.")
 
-# 5. Create High-Performance MainActivity.java with Native Exit Bridge and Hardware GPU Layer
+# 5. Create High-Performance MainActivity.java with Audio Permission & Exit Bridge
 src_code_dir = os.path.join(native_dir, "src", "com", "oxneon", "game")
 os.makedirs(src_code_dir, exist_ok=True)
 
@@ -136,6 +138,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -170,10 +173,16 @@ public class MainActivity extends Activity {
             );
         } catch (Exception e) {}
 
+        // Request audio recording runtime permission if needed
+        try {
+            if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.MODIFY_AUDIO_SETTINGS}, 101);
+            }
+        } catch (Exception e) {}
+
         webView = new WebView(this);
         setContentView(webView);
 
-        // Hardware GPU acceleration for ultra-smooth rendering on budget phones (Realme C55 / Helio G88)
         try {
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         } catch (Exception e) {}
@@ -190,9 +199,9 @@ public class MainActivity extends Activity {
             ws.setUseWideViewPort(true);
             ws.setRenderPriority(WebSettings.RenderPriority.HIGH);
             ws.setCacheMode(WebSettings.LOAD_DEFAULT);
+            ws.setMediaPlaybackRequiresUserGesture(false);
         } catch (Exception e) {}
 
-        // Add Bridge for instantaneous exit
         webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
 
         webView.setWebViewClient(new WebViewClient() {
@@ -202,7 +211,19 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
-        webView.setWebChromeClient(new WebChromeClient());
+
+        // Grant webview audio capture permission for voice notes
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        request.grant(request.getResources());
+                    }
+                });
+            }
+        });
 
         webView.loadUrl("file:///android_asset/index.html");
     }
@@ -235,7 +256,7 @@ public class MainActivity extends Activity {
 java_file = os.path.join(src_code_dir, "MainActivity.java")
 with open(java_file, "w", encoding="utf-8") as f:
     f.write(java_code)
-print("5. High-Performance MainActivity.java created.")
+print("5. High-Performance audio-ready MainActivity.java created.")
 
 # 6. Compile Java with javac
 bin_dir = os.path.join(native_dir, "bin")
@@ -257,13 +278,11 @@ print("6. Java code compiled to .class files.")
 dex_output_dir = os.path.join(native_dir, "dex")
 os.makedirs(dex_output_dir, exist_ok=True)
 
-class_files = [
-    os.path.join(bin_dir, "com", "oxneon", "game", "MainActivity.class"),
-    os.path.join(bin_dir, "com", "oxneon", "game", "MainActivity$1.class"),
-    os.path.join(bin_dir, "com", "oxneon", "game", "MainActivity$2.class"),
-    os.path.join(bin_dir, "com", "oxneon", "game", "MainActivity$AndroidBridge.class"),
-    os.path.join(bin_dir, "com", "oxneon", "game", "MainActivity$AndroidBridge$1.class")
-]
+class_files = []
+for root, _, files in os.walk(bin_dir):
+    for f in files:
+        if f.endswith('.class'):
+            class_files.append(os.path.join(root, f))
 
 cmd_d8 = [
     "java",
@@ -280,7 +299,7 @@ if res.returncode != 0:
     raise RuntimeError("D8 failed")
 print("7. Compiled to native classes.dex via D8.")
 
-# 8. Assemble Full Unsigned APK directly from src/ (Ultra-optimized GPU code)
+# 8. Assemble Full Unsigned APK directly from src/
 print("8. Packaging assets and dex into APK from src/...")
 dex_file = os.path.join(dex_output_dir, "classes.dex")
 unsigned_apk = os.path.join(native_dir, "ox_neon_unsigned.apk")
@@ -308,16 +327,18 @@ align_zip.zipalign(unsigned_apk, aligned_apk, alignment=4)
 print("10. APK 4-byte aligned.")
 
 # 10. Sign with Scheme v1, v2, v3 using SAME keystore for seamless updates
-final_apk_path = os.path.join(release_android_dir, "OX_Neon_Game.apk")
-if os.path.exists(final_apk_path):
-    os.remove(final_apk_path)
+final_v2_apk = os.path.join(release_android_dir, "OX_Neon_Game_v2.apk")
+final_main_apk = os.path.join(release_android_dir, "OX_Neon_Game.apk")
+
+if os.path.exists(final_v2_apk):
+    os.remove(final_v2_apk)
 
 cmd_sign = [
     "java",
     "-cp", f"{apksig_jar};{tools_dir}",
     "ApkSignerHelper",
     aligned_apk,
-    final_apk_path,
+    final_v2_apk,
     keystore_file,
     "oxneon123",
     "oxneon"
@@ -328,19 +349,20 @@ if res.returncode != 0:
     print("Signing error:", res.stderr)
     raise RuntimeError("Signing failed")
 
+# Copy to final_main_apk and root
+shutil.copy(final_v2_apk, final_main_apk)
+root_apk = os.path.join(base_dir, "OX_Neon_Game.apk")
+shutil.copy(final_v2_apk, root_apk)
+
 # Verify badging
-cmd_badge = [aapt2_exe, "dump", "badging", final_apk_path]
+cmd_badge = [aapt2_exe, "dump", "badging", final_v2_apk]
 res = subprocess.run(cmd_badge, capture_output=True, text=True)
 print("\n--- Final APK Badging ---")
 for line in res.stdout.splitlines():
     if any(k in line for k in ['package:', 'sdkVersion:', 'targetSdkVersion:', 'application-label:', 'application-icon-160:', 'application:']):
         print(" ", line)
 
-# Also make root copy for user convenience
-root_apk = os.path.join(base_dir, "OX_Neon_Game.apk")
-shutil.copy(final_apk_path, root_apk)
-
 if os.path.exists(native_dir):
     shutil.rmtree(native_dir)
 
-print(f"\n🎉 UPDATE BUILD COMPLETE: {final_apk_path} ({os.path.getsize(final_apk_path):,} bytes)")
+print(f"\n🎉 V2 BUILD COMPLETE: {final_v2_apk} ({os.path.getsize(final_v2_apk):,} bytes)")
