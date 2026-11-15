@@ -92,10 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pttLabel = document.getElementById('ptt-label');
   const recordingToast = document.getElementById('recording-toast');
   const recDuration = document.getElementById('rec-duration');
-  const btnToggleReactions = document.getElementById('btn-toggle-reactions');
-  const reactionBar = document.getElementById('reaction-bar');
-  const reactionButtons = document.querySelectorAll('.reaction-btn');
-  const floatingEmojisContainer = document.getElementById('floating-emojis');
+  const btnMicCancel = document.getElementById('btn-mic-cancel');
 
   // Chat Drawer Elements
   const chatDrawer = document.getElementById('chat-drawer');
@@ -131,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let isAiThinking = false;
   let onlineRematchRequestedByMe = false;
   let unreadCount = 0;
-  let isPttActive = false;
+  let isRecordingVoice = false;
   let recTimerInterval = null;
   let bannerTimer = null;
 
@@ -582,7 +579,8 @@ document.addEventListener('DOMContentLoaded', () => {
   mp.on('opponent_disconnected', () => {
     showToast('Opponent disconnected!');
     if (screens.game.classList.contains('active')) {
-      gameoverIcon.textContent = '⚠️';
+      gameoverIcon.className = 'winner-icon-bubble alert';
+      gameoverIcon.innerHTML = `<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
       gameoverTitle.textContent = 'Opponent Left';
       gameoverDesc.textContent = 'Your opponent disconnected from the match.';
       btnRematch.style.display = 'none';
@@ -605,10 +603,6 @@ document.addEventListener('DOMContentLoaded', () => {
     resetRoundForNewGame();
   });
 
-  mp.on('opponent_reaction', (data) => {
-    triggerFloatingEmoji(data.emoji, false);
-  });
-
   // Incoming Opponent Voice Note
   mp.on('opponent_voice_note', (data) => {
     sound.vibrate([40, 30, 40]);
@@ -622,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
       unreadCount++;
       unreadChatBadge.textContent = unreadCount;
       unreadChatBadge.style.display = 'flex';
-      showFloatingCommBanner('🎤', `Voice Note from Opponent (${data.duration}s)`, true, (data.duration || 3) * 1000 + 500);
+      showFloatingCommBanner('voice', `Voice Note from Opponent (${data.duration}s)`, (data.duration || 3) * 1000 + 500);
     }
   });
 
@@ -636,31 +630,34 @@ document.addEventListener('DOMContentLoaded', () => {
       unreadCount++;
       unreadChatBadge.textContent = unreadCount;
       unreadChatBadge.style.display = 'flex';
-      showFloatingCommBanner('💬', `${data.sender}: ${data.text}`, false, 3500);
+      showFloatingCommBanner('chat', `${data.sender}: ${data.text}`, 3500);
     }
   });
 
   /* ==========================================================================
-     PUSH-TO-TALK VOICE CHAT CONTROLLER
+     1-CLICK TOGGLE VOICE CHAT CONTROLLER
+     1st Click = Start Recording
+     2nd Click = Stop & Send Instantly
+     Cancel Button = Discard Recording
      ========================================================================== */
-  async function startPtt() {
-    if (isPttActive) return;
+  async function startVoiceRecording() {
+    if (isRecordingVoice) return;
     if (game.gameMode !== 'online' || !mp.isConnected) {
       showToast('Voice chat is available in online multiplayer!');
       return;
     }
 
-    isPttActive = true;
     const ok = await mp.startVoiceRecording();
     if (!ok) {
-      isPttActive = false;
       showToast('Microphone access needed for Voice Chat');
       return;
     }
 
+    isRecordingVoice = true;
     sound.vibrate(30);
     btnPushToTalk.classList.add('recording');
-    pttLabel.textContent = 'Speaking...';
+    pttLabel.textContent = 'Tap to Send';
+    if (btnMicCancel) btnMicCancel.style.display = 'flex';
     recordingToast.style.display = 'flex';
     recDuration.textContent = '0:00';
 
@@ -671,36 +668,61 @@ document.addEventListener('DOMContentLoaded', () => {
       const m = Math.floor(elapsed / 60);
       const s = elapsed % 60;
       recDuration.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
-      if (elapsed >= 15) { // Auto-stop at 15s max
-        stopPtt();
+      if (elapsed >= 15) { // Auto-stop and send at 15s max
+        stopAndSendVoiceRecording();
       }
     }, 250);
   }
 
-  async function stopPtt() {
-    if (!isPttActive) return;
-    isPttActive = false;
+  async function stopAndSendVoiceRecording() {
+    if (!isRecordingVoice) return;
+    isRecordingVoice = false;
     clearInterval(recTimerInterval);
     btnPushToTalk.classList.remove('recording');
-    pttLabel.textContent = 'Hold to Talk';
+    pttLabel.textContent = 'Voice Note';
+    if (btnMicCancel) btnMicCancel.style.display = 'none';
     recordingToast.style.display = 'none';
 
     const voiceNote = await mp.stopVoiceRecording();
-    if (voiceNote) {
+    if (voiceNote && voiceNote.dataUrl) {
       sound.vibrate(25);
       mp.sendVoiceNote(voiceNote.dataUrl, voiceNote.duration);
       addVoiceNoteToChat(voiceNote.dataUrl, voiceNote.duration, true);
-      showToast('🎤 Voice note sent!');
+      showToast('Voice note sent!');
     }
   }
 
-  // Push-to-Talk Mouse & Touch event listeners
-  btnPushToTalk.addEventListener('mousedown', (e) => { e.preventDefault(); startPtt(); });
-  window.addEventListener('mouseup', () => { if (isPttActive) stopPtt(); });
+  async function cancelVoiceRecording() {
+    if (!isRecordingVoice) return;
+    isRecordingVoice = false;
+    clearInterval(recTimerInterval);
+    btnPushToTalk.classList.remove('recording');
+    pttLabel.textContent = 'Voice Note';
+    if (btnMicCancel) btnMicCancel.style.display = 'none';
+    recordingToast.style.display = 'none';
 
-  btnPushToTalk.addEventListener('touchstart', (e) => { e.preventDefault(); startPtt(); }, { passive: false });
-  btnPushToTalk.addEventListener('touchend', (e) => { e.preventDefault(); stopPtt(); }, { passive: false });
-  btnPushToTalk.addEventListener('touchcancel', () => { stopPtt(); });
+    await mp.stopVoiceRecording(); // Discards audio without sending
+    sound.playClick();
+    showToast('Voice note cancelled');
+  }
+
+  // 1-Click Toggle: 1st Click = Record, 2nd Click = Send
+  btnPushToTalk.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!isRecordingVoice) {
+      startVoiceRecording();
+    } else {
+      stopAndSendVoiceRecording();
+    }
+  });
+
+  if (btnMicCancel) {
+    btnMicCancel.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelVoiceRecording();
+    });
+  }
 
   /* ==========================================================================
      TEXT CHAT DRAWER CONTROLLER
@@ -792,11 +814,18 @@ document.addEventListener('DOMContentLoaded', () => {
     chatMessagesList.scrollTop = chatMessagesList.scrollHeight;
   }
 
-  function showFloatingCommBanner(icon, contentText, isAudio, durationMs = 3500) {
-    bannerIconBubble.textContent = icon;
-    bannerAuthor.textContent = isAudio ? 'Voice Note' : 'Chat Message';
+  function showFloatingCommBanner(type, contentText, durationMs = 3500) {
+    const isAudio = (type === 'voice');
+    if (isAudio) {
+      bannerIconBubble.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`;
+      bannerAuthor.textContent = 'Voice Note';
+      bannerAudioWaves.style.display = 'flex';
+    } else {
+      bannerIconBubble.innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+      bannerAuthor.textContent = 'Chat Message';
+      bannerAudioWaves.style.display = 'none';
+    }
     bannerContent.textContent = contentText;
-    bannerAudioWaves.style.display = isAudio ? 'flex' : 'none';
     floatingCommBanner.style.display = 'flex';
 
     clearTimeout(bannerTimer);
@@ -812,32 +841,6 @@ document.addEventListener('DOMContentLoaded', () => {
     unreadCount = 0;
     unreadChatBadge.style.display = 'none';
   });
-
-  // Reaction Tray Toggle
-  btnToggleReactions.addEventListener('click', () => {
-    sound.playClick();
-    reactionBar.style.display = reactionBar.style.display === 'none' ? 'flex' : 'none';
-  });
-
-  reactionButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const emoji = btn.dataset.emoji;
-      triggerFloatingEmoji(emoji, true);
-      if (game.gameMode === 'online') {
-        mp.sendReaction(emoji);
-      }
-    });
-  });
-
-  function triggerFloatingEmoji(emoji, isOwn = true) {
-    sound.playClick();
-    const el = document.createElement('div');
-    el.className = 'floating-emoji';
-    el.textContent = emoji;
-    el.style.left = `${30 + Math.random() * 40}%`;
-    floatingEmojisContainer.appendChild(el);
-    setTimeout(() => el.remove(), 2100);
-  }
 
   /* ==========================================================================
      GAME ARENA LOGIC & DYNAMIC BOARD RENDERING
@@ -857,15 +860,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mode === 'local') {
       modeBadge.textContent = `Pass & Play • ${gridLabel} (${winTarget})`;
       mpCommBar.style.display = 'none';
-      reactionBar.style.display = 'none';
     } else if (mode === 'ai') {
       modeBadge.textContent = `VS AI (${options.aiDifficulty.toUpperCase()}) • ${gridLabel}`;
       mpCommBar.style.display = 'none';
-      reactionBar.style.display = 'none';
     } else if (mode === 'online') {
       modeBadge.textContent = `Room #${mp.roomCode} • ${gridLabel}`;
       mpCommBar.style.display = 'flex';
-      reactionBar.style.display = 'none';
     }
 
     // Reset Chat State
@@ -873,7 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
     unreadChatBadge.style.display = 'none';
     chatMessagesList.innerHTML = `
       <div class="chat-system-bubble">
-        👋 Match started! ${gridLabel} grid (${winTarget} to win).
+        Match started! ${gridLabel} grid (${winTarget} to win).
       </div>
     `;
 
@@ -1123,7 +1123,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (game.gameMode === 'ai') {
         if (winner === game.humanSymbol) {
-          title = 'You Won! 🎉';
+          title = 'You Won!';
           desc = `Spectacular victory on ${game.gridSize}x${game.gridSize}!`;
         } else {
           title = 'AI Won!';
@@ -1131,7 +1131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } else if (game.gameMode === 'online') {
         if (winner === mp.mySymbol) {
-          title = 'Victory! 🏆';
+          title = 'Victory!';
           desc = 'You defeated your online opponent!';
         } else {
           title = 'Defeat';
@@ -1194,6 +1194,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnGameoverMenu.addEventListener('click', () => {
     sound.playClick();
+    cancelVoiceRecording();
     closeModal(modals.gameover);
     if (game.gameMode === 'online') {
       mp.cleanup();
@@ -1205,10 +1206,12 @@ document.addEventListener('DOMContentLoaded', () => {
     sound.playClick();
     if (game.gameMode === 'online') {
       if (confirm('Leave online match?')) {
+        cancelVoiceRecording();
         mp.cleanup();
         showScreen('menu');
       }
     } else {
+      cancelVoiceRecording();
       showScreen('menu');
     }
   });

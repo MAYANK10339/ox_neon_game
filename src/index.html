@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>OX NEON - Modern Tic-Tac-Toe v2.0</title>
-  <meta name="description" content="Modern clean Tic-Tac-Toe (O,X) with 3x3, 5x5, 10x10 grids, Push-to-Talk Voice Chat, Text Chat, and AI.">
+  <meta name="description" content="Modern clean Tic-Tac-Toe (O,X) with 3x3, 5x5, 10x10 grids, 1-Click Voice Chat, Text Chat, and AI.">
   <meta name="theme-color" content="#070a12">
 
   <!-- Google Fonts: Outfit & Inter -->
@@ -32,12 +32,11 @@
   <!-- Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
 
-  <!-- Floating Emoji Animation Container -->
-  <div id="floating-emojis" class="floating-emojis-container"></div>
-
-  <!-- Floating Audio & Chat Notification Banner -->
+  <!-- Floating Audio & Chat Notification Banner (Vector Icon Only) -->
   <div id="floating-comm-banner" class="floating-comm-banner" style="display: none;">
-    <div class="banner-icon-bubble" id="banner-icon-bubble">💬</div>
+    <div class="banner-icon-bubble" id="banner-icon-bubble">
+      <svg id="banner-icon-svg" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+    </div>
     <div class="banner-text-group">
       <span id="banner-author" class="banner-author">Opponent</span>
       <span id="banner-content" class="banner-content">Incoming message...</span>
@@ -113,7 +112,7 @@
             </div>
             <div class="btn-texts">
               <span class="btn-title">MULTIPLAYER</span>
-              <span class="btn-desc">4-Digit Code • Voice & Text Chat</span>
+              <span class="btn-desc">4-Digit Code • 1-Click Voice & Text Chat</span>
             </div>
           </div>
           <div class="btn-arrow">
@@ -216,10 +215,10 @@
         <div id="strike-overlay" class="strike-svg-overlay"></div>
       </div>
 
-      <!-- MULTIPLAYER COMMUNICATION BAR (Voice Mic + Chat + Reactions) -->
+      <!-- MULTIPLAYER COMMUNICATION BAR (1-Click Voice Mic + Chat) -->
       <div id="mp-comm-bar" class="mp-comm-bar" style="display: none;">
         <!-- Toggle Chat Button with Unread Badge -->
-        <button id="btn-toggle-chat" class="comm-action-btn btn-chat-trigger" type="button" title="Chat with Opponent">
+        <button id="btn-toggle-chat" class="comm-action-btn btn-chat-trigger" type="button" title="Open Match Chat">
           <div class="btn-icon-wrap">
             <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             <span id="unread-chat-badge" class="badge-unread" style="display: none;">0</span>
@@ -227,37 +226,27 @@
           <span class="btn-label">Chat</span>
         </button>
 
-        <!-- Push-To-Talk Voice Mic Button -->
+        <!-- Tap-To-Record & Tap-To-Send Mic Controller -->
         <div class="ptt-mic-container">
-          <button id="btn-push-to-talk" class="comm-action-btn btn-ptt-mic" type="button" title="Hold to Speak">
-            <div class="mic-circle-glow">
-              <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          <button id="btn-push-to-talk" class="comm-action-btn btn-ptt-mic" type="button" title="Click to Record Voice Note">
+            <div class="mic-circle-glow" id="mic-icon-wrap">
+              <svg id="mic-icon-svg" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
             </div>
-            <span id="ptt-label" class="btn-label">Hold to Talk</span>
+            <span id="ptt-label" class="btn-label">Voice Note</span>
           </button>
+
+          <!-- Cancel Recording Button (Only visible while recording) -->
+          <button id="btn-mic-cancel" class="btn-mic-cancel" type="button" title="Cancel Recording" style="display: none;">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+
           <!-- Active Recording Tooltip / Indicator -->
           <div id="recording-toast" class="recording-toast" style="display: none;">
             <span class="pulse-red-dot"></span>
-            <span class="rec-title">Recording Voice Note...</span>
+            <span class="rec-title">Recording... Tap to Send</span>
             <span id="rec-duration" class="rec-timer">0:00</span>
           </div>
         </div>
-
-        <!-- Emoji Reactions Trigger -->
-        <button id="btn-toggle-reactions" class="comm-action-btn btn-react-trigger" type="button" title="Send Reaction">
-          <span class="emoji-icon">🔥</span>
-          <span class="btn-label">React</span>
-        </button>
-      </div>
-
-      <!-- Emoji Reactions Popout Tray -->
-      <div id="reaction-bar" class="reaction-bar" style="display: none;">
-        <button class="reaction-btn" data-emoji="🔥">🔥</button>
-        <button class="reaction-btn" data-emoji="👏">👏</button>
-        <button class="reaction-btn" data-emoji="😱">😱</button>
-        <button class="reaction-btn" data-emoji="🤔">🤔</button>
-        <button class="reaction-btn" data-emoji="💀">💀</button>
-        <button class="reaction-btn" data-emoji="🏆">🏆</button>
       </div>
 
       <!-- Game Bottom Bar -->
@@ -292,7 +281,7 @@
     <!-- Messages Container -->
     <div id="chat-messages-list" class="chat-messages-list">
       <div class="chat-system-bubble">
-        👋 Welcome to the match! Type messages or hold the mic to send voice notes.
+        Match chat active. Type messages or tap Voice Note to record.
       </div>
     </div>
 
@@ -512,7 +501,7 @@
   </div>
 
   <!-- ====================================================================
-       MODAL 3: GAME OVER / RESULT
+       MODAL 3: GAME OVER / RESULT (Custom Vector Only)
        ==================================================================== -->
   <div id="modal-gameover" class="modal-overlay">
     <div class="modal-content gameover-modal-content">
