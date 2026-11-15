@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const game = window.gameEngine;
   const ai = window.aiEngine;
   const mp = window.multiplayerEngine;
+  const economy = window.economy;
 
   // DOM Screens
   const screens = {
@@ -27,15 +28,31 @@ document.addEventListener('DOMContentLoaded', () => {
     play: document.getElementById('modal-play-select'),
     multiplayer: document.getElementById('modal-multiplayer'),
     gameover: document.getElementById('modal-gameover'),
-    exit: document.getElementById('modal-exit')
+    exit: document.getElementById('modal-exit'),
+    shop: document.getElementById('modal-shop')
   };
 
-  // Navigation Buttons
+  // Navigation & Economy Buttons
   const btnSound = document.getElementById('btn-sound');
   const btnFullscreen = document.getElementById('btn-fullscreen');
+  const btnCoinPill = document.getElementById('btn-coin-pill');
+  const navCoinCount = document.getElementById('nav-coin-count');
+  const headerUserBadge = document.getElementById('header-user-badge');
   const btnMenuPlay = document.getElementById('btn-menu-play');
   const btnMenuMultiplayer = document.getElementById('btn-menu-multiplayer');
+  const btnMenuShop = document.getElementById('btn-menu-shop');
   const btnMenuExit = document.getElementById('btn-menu-exit');
+
+  // Vault & Badges Shop Elements
+  const vaultCoinAmount = document.getElementById('vault-coin-amount');
+  const secretCodeInput = document.getElementById('secret-code-input');
+  const btnRedeemCode = document.getElementById('btn-redeem-code');
+  const redeemFeedback = document.getElementById('redeem-feedback');
+  const badgeCards = document.querySelectorAll('.badge-shop-card');
+  const badgePlayerX = document.getElementById('badge-player-x');
+  const badgePlayerO = document.getElementById('badge-player-o');
+  const gameoverCoinReward = document.getElementById('gameover-coin-reward');
+  const rewardCoinText = document.getElementById('reward-coin-text');
 
   // Play Mode Selection & Grid Pills
   const btnModeLocal = document.getElementById('btn-mode-local');
@@ -231,6 +248,177 @@ document.addEventListener('DOMContentLoaded', () => {
     openModal(modals.multiplayer);
     initializeHostTab();
   });
+
+  if (btnMenuShop) {
+    btnMenuShop.addEventListener('click', () => {
+      openModal(modals.shop);
+      updateShopUI();
+    });
+  }
+
+  if (btnCoinPill) {
+    btnCoinPill.addEventListener('click', () => {
+      openModal(modals.shop);
+      updateShopUI();
+    });
+  }
+
+  /* ==========================================================================
+     OX VAULT & BADGE SHOP (ECONOMY SYSTEM & SECRET CODES)
+     ========================================================================== */
+  function updateEconomyUI() {
+    if (!economy) return;
+    const coins = economy.getCoins();
+    if (navCoinCount) navCoinCount.textContent = coins.toLocaleString();
+    if (vaultCoinAmount) vaultCoinAmount.textContent = coins.toLocaleString();
+
+    const equipped = economy.getEquippedBadge();
+    if (headerUserBadge) {
+      if (equipped) {
+        headerUserBadge.innerHTML = economy.renderBadgeHtml(equipped);
+        headerUserBadge.style.display = 'inline-flex';
+      } else {
+        headerUserBadge.innerHTML = '';
+        headerUserBadge.style.display = 'none';
+      }
+    }
+
+    if (mp) {
+      mp.setMyBadge(equipped);
+    }
+
+    updateShopUI();
+  }
+
+  function updateShopUI() {
+    if (!economy) return;
+    const coins = economy.getCoins();
+    const equipped = economy.getEquippedBadge();
+
+    badgeCards.forEach(card => {
+      const badgeId = card.dataset.badgeId;
+      const btn = card.querySelector('.btn-badge-action');
+      if (!btn || !badgeId) return;
+
+      const badge = economy.BADGES[badgeId];
+      if (!badge) return;
+
+      const owned = economy.hasBadge(badgeId);
+
+      btn.className = 'btn-badge-action';
+      if (!owned) {
+        const canAfford = coins >= badge.cost;
+        if (badgeId === 'xer_verified') {
+          btn.classList.add('state-buy-xer');
+        } else {
+          btn.classList.add('state-buy');
+        }
+
+        if (canAfford) {
+          btn.textContent = `Unlock for ${badge.cost.toLocaleString()} Coins`;
+          btn.disabled = false;
+        } else {
+          const needed = badge.cost - coins;
+          btn.textContent = `Need ${needed.toLocaleString()} more Coins`;
+          btn.disabled = true;
+        }
+      } else {
+        btn.disabled = false;
+        if (equipped === badgeId) {
+          btn.classList.add('state-equipped');
+          btn.textContent = 'Equipped (Tap to Unequip)';
+        } else {
+          btn.classList.add('state-equip');
+          btn.textContent = 'Equip Badge';
+        }
+      }
+    });
+  }
+
+  // Secret Code "xerpro" Redeem Action (+10,000 Coins every time)
+  if (btnRedeemCode && secretCodeInput) {
+    function handleRedeemCode() {
+      const code = secretCodeInput.value;
+      if (!code) return;
+      const res = economy.redeemSecretCode(code);
+
+      if (redeemFeedback) {
+        redeemFeedback.className = `redeem-feedback ${res.success ? 'success' : 'error'}`;
+        redeemFeedback.textContent = res.message;
+        redeemFeedback.style.display = 'block';
+
+        clearTimeout(redeemFeedback.timer);
+        redeemFeedback.timer = setTimeout(() => {
+          redeemFeedback.style.display = 'none';
+        }, 4500);
+      }
+
+      if (res.success) {
+        showToast('+10,000 Coins Added!');
+        secretCodeInput.value = '';
+      } else {
+        showToast('Invalid Secret Code');
+      }
+    }
+
+    btnRedeemCode.addEventListener('click', handleRedeemCode);
+    secretCodeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleRedeemCode();
+      }
+    });
+  }
+
+  // Badge Buy & Equip Click Listeners
+  badgeCards.forEach(card => {
+    const btn = card.querySelector('.btn-badge-action');
+    const badgeId = card.dataset.badgeId;
+    if (btn && badgeId) {
+      btn.addEventListener('click', () => {
+        if (!economy.hasBadge(badgeId)) {
+          const res = economy.buyBadge(badgeId);
+          showToast(res.message);
+        } else {
+          const res = economy.equipBadge(badgeId);
+          showToast(res.message);
+        }
+      });
+    }
+  });
+
+  function updatePlayerBadges() {
+    if (!economy) return;
+    const myBadge = economy.getEquippedBadge();
+    if (game.gameMode === 'local') {
+      if (badgePlayerX) badgePlayerX.innerHTML = myBadge ? economy.renderBadgeHtml(myBadge) : '';
+      if (badgePlayerO) badgePlayerO.innerHTML = '';
+    } else if (game.gameMode === 'ai') {
+      if (game.humanSymbol === 'X') {
+        if (badgePlayerX) badgePlayerX.innerHTML = myBadge ? economy.renderBadgeHtml(myBadge) : '';
+        if (badgePlayerO) badgePlayerO.innerHTML = '';
+      } else {
+        if (badgePlayerO) badgePlayerO.innerHTML = myBadge ? economy.renderBadgeHtml(myBadge) : '';
+        if (badgePlayerX) badgePlayerX.innerHTML = '';
+      }
+    } else if (game.gameMode === 'online') {
+      if (mp.mySymbol === 'X') {
+        if (badgePlayerX) badgePlayerX.innerHTML = myBadge ? economy.renderBadgeHtml(myBadge) : '';
+        if (badgePlayerO) badgePlayerO.innerHTML = mp.opponentBadge ? economy.renderBadgeHtml(mp.opponentBadge) : '';
+      } else {
+        if (badgePlayerO) badgePlayerO.innerHTML = myBadge ? economy.renderBadgeHtml(myBadge) : '';
+        if (badgePlayerX) badgePlayerX.innerHTML = mp.opponentBadge ? economy.renderBadgeHtml(mp.opponentBadge) : '';
+      }
+    }
+  }
+
+  window.addEventListener('ox_economy_updated', () => {
+    updateEconomyUI();
+    updatePlayerBadges();
+  });
+
+  // Initial Economy UI load
+  updateEconomyUI();
 
   btnMenuExit.addEventListener('click', () => {
     openModal(modals.exit);
@@ -570,6 +758,11 @@ document.addEventListener('DOMContentLoaded', () => {
       isOnlineHost: mp.isHost,
       gridSize: data.gridSize || 3
     });
+    updatePlayerBadges();
+  });
+
+  mp.on('opponent_badge_updated', () => {
+    updatePlayerBadges();
   });
 
   mp.on('opponent_move', (data) => {
@@ -606,7 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Incoming Opponent Voice Note
   mp.on('opponent_voice_note', (data) => {
     sound.vibrate([40, 30, 40]);
-    addVoiceNoteToChat(data.audio, data.duration, false);
+    addVoiceNoteToChat(data.audio, data.duration, false, data.badge);
 
     // Auto-play opponent's voice note
     mp.playAudioDataUrl(data.audio);
@@ -624,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
   mp.on('opponent_chat_text', (data) => {
     sound.playClick();
     sound.vibrate(30);
-    addTextToChat(data.text, false);
+    addTextToChat(data.text, false, data.badge);
 
     if (!chatDrawer.classList.contains('active')) {
       unreadCount++;
@@ -754,25 +947,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  function addTextToChat(text, isMine) {
+  function addTextToChat(text, isMine, badgeId = null) {
     const row = document.createElement('div');
     row.className = `chat-msg-row ${isMine ? 'mine' : 'opponent'}`;
 
     const safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const effectiveBadge = isMine ? (economy ? economy.getEquippedBadge() : null) : (badgeId || mp.opponentBadge);
+    const badgeHtml = effectiveBadge && economy ? ` ${economy.renderBadgeHtml(effectiveBadge)}` : '';
+
     row.innerHTML = `
       <div class="chat-msg-bubble">${safeText}</div>
-      <span class="chat-msg-meta">${isMine ? 'You' : 'Opponent'}</span>
+      <span class="chat-msg-meta">${isMine ? 'You' : 'Opponent'}${badgeHtml}</span>
     `;
 
     chatMessagesList.appendChild(row);
     chatMessagesList.scrollTop = chatMessagesList.scrollHeight;
   }
 
-  function addVoiceNoteToChat(dataUrl, durationSec, isMine) {
+  function addVoiceNoteToChat(dataUrl, durationSec, isMine, badgeId = null) {
     const row = document.createElement('div');
     row.className = `chat-msg-row ${isMine ? 'mine' : 'opponent'}`;
 
     const durFormatted = `0:${durationSec < 10 ? '0' : ''}${durationSec}`;
+    const effectiveBadge = isMine ? (economy ? economy.getEquippedBadge() : null) : (badgeId || mp.opponentBadge);
+    const badgeHtml = effectiveBadge && economy ? ` ${economy.renderBadgeHtml(effectiveBadge)}` : '';
 
     row.innerHTML = `
       <div class="voice-note-bubble">
@@ -784,7 +982,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <span class="voice-duration-text">${durFormatted}</span>
       </div>
-      <span class="chat-msg-meta">${isMine ? 'You' : 'Opponent'} • Voice Note</span>
+      <span class="chat-msg-meta">${isMine ? 'You' : 'Opponent'}${badgeHtml} • Voice Note</span>
     `;
 
     const playBtn = row.querySelector('.voice-play-btn');
@@ -890,6 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
     buildBoardDom();
     renderBoard();
     updateTurnDisplay();
+    updatePlayerBadges();
 
     showScreen('game');
 
@@ -1120,23 +1319,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let title = `Player ${winner} Wins!`;
       let desc = `Connected ${game.winLength} in a row!`;
+      let coinsEarned = 100;
+      let rewardLabel = '+100 Coins (Victory!)';
 
       if (game.gameMode === 'ai') {
         if (winner === game.humanSymbol) {
           title = 'You Won!';
           desc = `Spectacular victory on ${game.gridSize}x${game.gridSize}!`;
+          coinsEarned = 100;
+          rewardLabel = '+100 Coins (Victory!)';
         } else {
           title = 'AI Won!';
           desc = 'Better luck next round!';
+          coinsEarned = 10;
+          rewardLabel = '+10 Coins (Match Reward)';
         }
       } else if (game.gameMode === 'online') {
         if (winner === mp.mySymbol) {
           title = 'Victory!';
           desc = 'You defeated your online opponent!';
+          coinsEarned = 100;
+          rewardLabel = '+100 Coins (Online Victory!)';
         } else {
           title = 'Defeat';
           desc = 'Opponent connected in a row.';
+          coinsEarned = 10;
+          rewardLabel = '+10 Coins (Match Reward)';
         }
+      } else {
+        coinsEarned = 100;
+        rewardLabel = '+100 Coins (Local Win!)';
+      }
+
+      if (economy) {
+        economy.addCoins(coinsEarned);
+      }
+      if (rewardCoinText) {
+        rewardCoinText.textContent = rewardLabel;
+      }
+      if (gameoverCoinReward) {
+        gameoverCoinReward.style.display = 'inline-flex';
       }
 
       gameoverTitle.textContent = title;
@@ -1159,6 +1381,18 @@ document.addEventListener('DOMContentLoaded', () => {
       gameoverIcon.textContent = '=';
       gameoverTitle.textContent = "It's a Draw!";
       gameoverDesc.textContent = `A hard-fought stalemate on ${game.gridSize}x${game.gridSize}.`;
+
+      const tieCoins = 25;
+      if (economy) {
+        economy.addCoins(tieCoins);
+      }
+      if (rewardCoinText) {
+        rewardCoinText.textContent = `+${tieCoins} Coins (Stalemate Reward)`;
+      }
+      if (gameoverCoinReward) {
+        gameoverCoinReward.style.display = 'inline-flex';
+      }
+
       btnRematch.style.display = 'block';
       btnRematch.textContent = 'Play Again';
       btnRematch.classList.remove('pulse');
@@ -1172,6 +1406,7 @@ document.addEventListener('DOMContentLoaded', () => {
     game.resetRound();
     renderBoard();
     updateTurnDisplay();
+    updatePlayerBadges();
     closeModal(modals.gameover);
     showToast(`New Round Started! (${game.gridSize}x${game.gridSize})`);
 

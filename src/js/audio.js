@@ -174,7 +174,7 @@ class SoundEngine {
     });
   }
 
-  // Pop sound for emoji reactions
+  // Pop sound for UI interactions
   playReaction() {
     if (this.muted) return;
     this.init();
@@ -196,6 +196,33 @@ class SoundEngine {
 
     osc.start();
     osc.stop(ctx.currentTime + 0.11);
+  }
+
+  // Sparkling coin pickup chime (Classic arcade coin arpeggio)
+  playCoinReward() {
+    if (this.muted) return;
+    this.init();
+    if (!this.audioCtx) return;
+
+    const ctx = this.audioCtx;
+    const notes = [987.77, 1318.51]; // B5 -> E6
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      const startTime = ctx.currentTime + idx * 0.08;
+
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0.18, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + 0.3);
+    });
   }
 
   // Haptic feedback for mobile phones

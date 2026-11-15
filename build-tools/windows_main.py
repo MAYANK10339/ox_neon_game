@@ -42,7 +42,7 @@ def main():
 
     api = WindowApi()
     window = webview.create_window(
-        title='OX Neon v2.0 - Modern Tic-Tac-Toe',
+        title='OX Ultimate - The Ultimate Tic-Tac-Toe Arena',
         url=index_html,
         width=460,
         height=760,

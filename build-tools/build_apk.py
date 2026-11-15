@@ -5,7 +5,7 @@ import zipfile
 from PIL import Image
 
 print("==================================================")
-print("  OX NEON - ULTRA-OPTIMIZED APK (VERSION 2.0.0)   ")
+print("  OX ULTIMATE - HIGH PERFORMANCE APK (v3.0.0)     ")
 print("==================================================")
 
 tools_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,12 +20,12 @@ if os.path.exists(native_dir):
     shutil.rmtree(native_dir)
 os.makedirs(native_dir, exist_ok=True)
 
-# 1. Create AndroidManifest.xml with versionCode="4" and versionName="2.0.0" with Audio Capture Permissions!
+# 1. Create AndroidManifest.xml with versionCode="5" and versionName="3.0.0" with Audio Capture Permissions!
 manifest_content = """<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.oxneon.game"
-    android:versionCode="4"
-    android:versionName="2.0.0">
+    android:versionCode="5"
+    android:versionName="3.0.0">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
 
@@ -35,7 +35,7 @@ manifest_content = """<?xml version="1.0" encoding="utf-8"?>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <application
-        android:label="OX Neon"
+        android:label="OX Ultimate"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:hardwareAccelerated="true"
@@ -44,7 +44,7 @@ manifest_content = """<?xml version="1.0" encoding="utf-8"?>
 
         <activity
             android:name="com.oxneon.game.MainActivity"
-            android:label="OX Neon"
+            android:label="OX Ultimate"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="portrait"
             android:exported="true">
@@ -60,7 +60,7 @@ manifest_content = """<?xml version="1.0" encoding="utf-8"?>
 manifest_file = os.path.join(native_dir, "AndroidManifest.xml")
 with open(manifest_file, "w", encoding="utf-8") as f:
     f.write(manifest_content)
-print("1. AndroidManifest.xml (v2.0 / audio-enabled) created.")
+print("1. AndroidManifest.xml (v3.0 / OX Ultimate) created.")
 
 # 2. Res folder and icons
 res_dir = os.path.join(native_dir, "res")
@@ -68,7 +68,7 @@ values_dir = os.path.join(res_dir, "values")
 os.makedirs(values_dir, exist_ok=True)
 
 with open(os.path.join(values_dir, "strings.xml"), "w", encoding="utf-8") as f:
-    f.write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="app_name">OX Neon</string>\n</resources>\n')
+    f.write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="app_name">OX Ultimate</string>\n</resources>\n')
 
 densities = {
     'mipmap-mdpi': 48,
@@ -327,18 +327,18 @@ align_zip.zipalign(unsigned_apk, aligned_apk, alignment=4)
 print("10. APK 4-byte aligned.")
 
 # 10. Sign with Scheme v1, v2, v3 using SAME keystore for seamless updates
-final_v2_apk = os.path.join(release_android_dir, "OX_Neon_Game_v2.apk")
+final_ultimate_apk = os.path.join(release_android_dir, "OX_Ultimate.apk")
 final_main_apk = os.path.join(release_android_dir, "OX_Neon_Game.apk")
 
-if os.path.exists(final_v2_apk):
-    os.remove(final_v2_apk)
+if os.path.exists(final_ultimate_apk):
+    os.remove(final_ultimate_apk)
 
 cmd_sign = [
     "java",
     "-cp", f"{apksig_jar};{tools_dir}",
     "ApkSignerHelper",
     aligned_apk,
-    final_v2_apk,
+    final_ultimate_apk,
     keystore_file,
     "oxneon123",
     "oxneon"
@@ -350,12 +350,12 @@ if res.returncode != 0:
     raise RuntimeError("Signing failed")
 
 # Copy to final_main_apk and root
-shutil.copy(final_v2_apk, final_main_apk)
+shutil.copy(final_ultimate_apk, final_main_apk)
 root_apk = os.path.join(base_dir, "OX_Neon_Game.apk")
-shutil.copy(final_v2_apk, root_apk)
+shutil.copy(final_ultimate_apk, root_apk)
 
 # Verify badging
-cmd_badge = [aapt2_exe, "dump", "badging", final_v2_apk]
+cmd_badge = [aapt2_exe, "dump", "badging", final_ultimate_apk]
 res = subprocess.run(cmd_badge, capture_output=True, text=True)
 print("\n--- Final APK Badging ---")
 for line in res.stdout.splitlines():
@@ -365,4 +365,4 @@ for line in res.stdout.splitlines():
 if os.path.exists(native_dir):
     shutil.rmtree(native_dir)
 
-print(f"\n🎉 V2 BUILD COMPLETE: {final_v2_apk} ({os.path.getsize(final_v2_apk):,} bytes)")
+print(f"\n🎉 OX ULTIMATE BUILD COMPLETE: {final_ultimate_apk} ({os.path.getsize(final_ultimate_apk):,} bytes)")
