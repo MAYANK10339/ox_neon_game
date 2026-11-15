@@ -20,10 +20,6 @@ class MultiplayerEngine {
     this.isConnected = false;
     this.handlers = {};
 
-    // Profile & verification badge states
-    this.myBadge = null;
-    this.opponentBadge = null;
-
     // Voice recording states
     this.mediaRecorder = null;
     this.audioChunks = [];
@@ -144,7 +140,7 @@ class MultiplayerEngine {
           connection.on('open', () => {
             clearTimeout(timeout);
             this.setupConnection(connection);
-            this.send({ type: 'guest_joined', code: this.roomCode, guestBadge: this.myBadge });
+            this.send({ type: 'guest_joined', code: this.roomCode });
             resolve();
           });
 
@@ -180,8 +176,7 @@ class MultiplayerEngine {
           guestSymbol: 'O',
           currentTurn: 'X',
           gridSize: this.gridSize,
-          winLength: this.winLength,
-          hostBadge: this.myBadge
+          winLength: this.winLength
         });
       }
       this.emit('connected', { isHost: this.isHost, symbol: this.mySymbol, gridSize: this.gridSize });
@@ -201,13 +196,6 @@ class MultiplayerEngine {
     });
   }
 
-  setMyBadge(badgeId) {
-    this.myBadge = badgeId;
-    if (this.isConnected) {
-      this.send({ type: 'badge_update', badge: badgeId });
-    }
-  }
-
   handleBroadcastMessage(data) {
     if (!data || data.roomCode !== this.roomCode) return;
     if (data.fromHost === this.isHost) return;
@@ -223,36 +211,21 @@ class MultiplayerEngine {
         this.opponentSymbol = 'X';
         this.gridSize = data.gridSize || 3;
         this.winLength = data.winLength || 3;
-        this.opponentBadge = data.hostBadge || null;
         this.emit('game_ready', {
           mySymbol: this.mySymbol,
           currentTurn: data.currentTurn,
           gridSize: this.gridSize,
-          winLength: this.winLength,
-          opponentBadge: this.opponentBadge
+          winLength: this.winLength
         });
-        if (this.myBadge) {
-          this.send({ type: 'badge_update', badge: this.myBadge });
-        }
         break;
 
       case 'guest_joined':
-        this.opponentBadge = data.guestBadge || null;
         this.emit('game_ready', {
           mySymbol: 'X',
           currentTurn: 'X',
           gridSize: this.gridSize,
-          winLength: this.winLength,
-          opponentBadge: this.opponentBadge
+          winLength: this.winLength
         });
-        if (this.myBadge) {
-          this.send({ type: 'badge_update', badge: this.myBadge });
-        }
-        break;
-
-      case 'badge_update':
-        this.opponentBadge = data.badge || null;
-        this.emit('opponent_badge_updated', { badge: this.opponentBadge });
         break;
 
       case 'move':
@@ -275,7 +248,6 @@ class MultiplayerEngine {
         this.emit('opponent_chat_text', {
           text: data.text,
           sender: data.sender || this.opponentSymbol,
-          badge: data.badge || this.opponentBadge || null,
           timestamp: data.timestamp || Date.now()
         });
         break;
@@ -284,8 +256,7 @@ class MultiplayerEngine {
         this.emit('opponent_voice_note', {
           audio: data.audio,
           duration: data.duration,
-          sender: data.sender || this.opponentSymbol,
-          badge: data.badge || this.opponentBadge || null
+          sender: data.sender || this.opponentSymbol
         });
         break;
     }
@@ -331,7 +302,6 @@ class MultiplayerEngine {
       type: 'chat_text',
       text: trimmed,
       sender: this.mySymbol,
-      badge: this.myBadge,
       timestamp: Date.now()
     };
     this.send(msg);
@@ -428,8 +398,7 @@ class MultiplayerEngine {
       type: 'voice_note',
       audio: dataUrl,
       duration: duration,
-      sender: this.mySymbol,
-      badge: this.myBadge
+      sender: this.mySymbol
     };
     this.send(packet);
     return packet;

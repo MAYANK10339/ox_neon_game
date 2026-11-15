@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>OX ULTIMATE - Tic Tac Toe</title>
-  <meta name="description" content="OX ULTIMATE - Tic-Tac-Toe (O,X) with Coin System, VIP & Premium Badges, Red Xer Fired Verified Tick, 3x3/5x5/10x10 grids, and 1-Click Voice Chat.">
+  <title>OX NEON - Modern Tic-Tac-Toe v2.0</title>
+  <meta name="description" content="Modern clean Tic-Tac-Toe (O,X) with 3x3, 5x5, 10x10 grids, 1-Click Voice Chat, Text Chat, and AI.">
   <meta name="theme-color" content="#070a12">
 
   <!-- Google Fonts: Outfit & Inter -->
@@ -58,18 +58,9 @@
         <div class="brand-icon">
           <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
         </div>
-        <span class="brand-name">OX ULTIMATE <span class="ultimate-tag">ULTIMATE</span></span>
+        <span class="brand-name">OX NEON <span class="v2-tag">v2</span></span>
       </div>
       <div class="nav-actions">
-        <!-- Coin Counter Pill (Click opens Vault / Shop) -->
-        <button id="btn-coin-pill" class="coin-pill-btn" type="button" title="OX Vault & Badges">
-          <svg class="coin-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#f59e0b" stroke="#fbbf24" stroke-width="1.5"/><circle cx="12" cy="12" r="6" fill="#d97706" stroke="#fef3c7" stroke-width="1"/><text x="12" y="15.2" text-anchor="middle" font-size="9" font-weight="900" fill="#fff" font-family="sans-serif">¢</text></svg>
-          <span id="nav-coin-count" class="coin-count-text">0</span>
-        </button>
-
-        <!-- Equipped Badge Preview in Nav -->
-        <div id="header-user-badge" class="header-user-badge" style="display: none;"></div>
-
         <button id="btn-sound" class="icon-btn" title="Toggle Sound" aria-label="Toggle Sound">
           <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
         </button>
@@ -80,7 +71,7 @@
     </header>
 
     <!-- ====================================================================
-         SCREEN 1: MAIN MENU (Play, Multiplayer, Vault & Exit)
+         SCREEN 1: MAIN MENU (Play, Multiplayer, Exit)
          ==================================================================== -->
     <main id="screen-menu" class="screen active">
       
@@ -90,11 +81,11 @@
           <div class="big-symbol x-symbol">✕</div>
           <div class="big-symbol o-symbol">○</div>
         </div>
-        <h1 class="hero-title">OX ULTIMATE</h1>
-        <p class="hero-subtitle">The Ultimate Tic-Tac-Toe Arena • 3x3 • 5x5 • 10x10</p>
+        <h1 class="hero-title">TIC • TAC • TOE</h1>
+        <p class="hero-subtitle">Modern Clean Edition • 3x3 • 5x5 • 10x10</p>
       </section>
 
-      <!-- Main Menu Action Buttons -->
+      <!-- Three Main Menu Action Buttons -->
       <nav class="menu-buttons" aria-label="Main Menu">
         
         <!-- 1. PLAY BUTTON -->
@@ -129,23 +120,7 @@
           </div>
         </button>
 
-        <!-- 3. VAULT & BADGES (SHOP) -->
-        <button id="btn-menu-shop" class="menu-btn btn-vault" type="button">
-          <div class="btn-left">
-            <div class="btn-icon-box" style="background: rgba(245, 158, 11, 0.16); color: #fbbf24;">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v10M9 9.5h6a1.5 1.5 0 0 0 0-3H9v6h6a1.5 1.5 0 0 1 0 3H9"></path></svg>
-            </div>
-            <div class="btn-texts">
-              <span class="btn-title">VAULT & BADGES</span>
-              <span class="btn-desc">VIP • Premium • Red Xer Fired Verified Tick</span>
-            </div>
-          </div>
-          <div class="btn-arrow">
-            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-          </div>
-        </button>
-
-        <!-- 4. EXIT BUTTON -->
+        <!-- 3. EXIT BUTTON -->
         <button id="btn-menu-exit" class="menu-btn btn-exit" type="button">
           <div class="btn-left">
             <div class="btn-icon-box">
@@ -203,10 +178,7 @@
         <div id="card-player-x" class="player-card player-x active-turn">
           <div class="card-top">
             <div class="player-badge-sym">X</div>
-            <div class="player-info-meta">
-              <span id="name-player-x" class="player-name">Player X</span>
-              <div id="badge-player-x" class="player-tag-badge"></div>
-            </div>
+            <span id="name-player-x" class="player-name">Player X</span>
           </div>
           <span id="score-x" class="player-score">0</span>
           <span class="turn-pill-indicator">TURN</span>
@@ -222,10 +194,7 @@
         <div id="card-player-o" class="player-card player-o">
           <div class="card-top">
             <div class="player-badge-sym">O</div>
-            <div class="player-info-meta">
-              <span id="name-player-o" class="player-name">Player O</span>
-              <div id="badge-player-o" class="player-tag-badge"></div>
-            </div>
+            <span id="name-player-o" class="player-name">Player O</span>
           </div>
           <span id="score-o" class="player-score">0</span>
           <span class="turn-pill-indicator">TURN</span>
@@ -540,12 +509,6 @@
       <h2 id="gameover-title" class="gameover-title">Player X Wins!</h2>
       <p id="gameover-desc" class="gameover-subtitle">Connected in a row!</p>
 
-      <!-- Match Coin Reward Indicator -->
-      <div id="gameover-coin-reward" class="gameover-coin-reward">
-        <svg class="coin-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#f59e0b" stroke="#fbbf24" stroke-width="1.5"/><circle cx="12" cy="12" r="6" fill="#d97706" stroke="#fef3c7" stroke-width="1"/><text x="12" y="15.2" text-anchor="middle" font-size="9" font-weight="900" fill="#fff" font-family="sans-serif">¢</text></svg>
-        <span id="reward-coin-text">+100 Coins Earned</span>
-      </div>
-
       <div class="gameover-actions">
         <button id="btn-rematch" class="primary-btn" type="button">Play Again (Rematch)</button>
         <button id="btn-gameover-menu" class="secondary-action-btn" type="button">Main Menu</button>
@@ -572,105 +535,8 @@
     </div>
   </div>
 
-  <!-- ====================================================================
-       MODAL 5: OX VAULT & BADGE SHOP (Coins, Secret Code, VIP/Premium/Red Xer Fired)
-       ==================================================================== -->
-  <div id="modal-shop" class="modal-overlay">
-    <div class="modal-content shop-modal-content">
-      <div class="modal-header">
-        <h2 class="modal-title">
-          <svg viewBox="0 0 24 24" class="shop-title-svg"><circle cx="12" cy="12" r="9" stroke="currentColor" fill="none"/><path d="M12 7v10M9 9.5h6a1.5 1.5 0 0 0 0-3H9v6h6a1.5 1.5 0 0 1 0 3H9"/></svg>
-          OX Vault & Badges
-        </h2>
-        <button class="modal-close-btn" aria-label="Close modal">✕</button>
-      </div>
-
-      <!-- Live Coin Balance Banner -->
-      <div class="vault-balance-banner">
-        <div class="coin-visual-wrap">
-          <svg class="vault-coin-icon" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" fill="#f59e0b" stroke="#fef3c7" stroke-width="1.5"/>
-            <circle cx="12" cy="12" r="7" fill="#d97706" stroke="#fbbf24" stroke-width="1"/>
-            <text x="12" y="15.5" text-anchor="middle" font-size="10" font-weight="900" fill="#fff" font-family="sans-serif">¢</text>
-          </svg>
-        </div>
-        <div class="vault-balance-text">
-          <span class="vault-balance-sub">Current Coin Balance</span>
-          <span id="vault-coin-amount" class="vault-balance-num">0</span>
-        </div>
-      </div>
-
-      <!-- Secret Code Redeem Box -->
-      <div class="secret-code-card">
-        <div class="secret-code-header">
-          <svg class="secret-key-icon" viewBox="0 0 24 24"><path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5-2 2 1.5 1.5L3 20v2h2l9-9 1.5 1.5 2-2-1.5-1.5 3.5-3.5M7 16l2 2"/></svg>
-          <span class="secret-code-title">Redeem Secret Code</span>
-        </div>
-        <p class="secret-code-desc">Use code <strong>xerpro</strong> to receive +10,000 Coins every single time!</p>
-        <div class="secret-code-input-row">
-          <input id="secret-code-input" class="secret-code-input" type="text" placeholder="Enter secret code (e.g. xerpro)" autocomplete="off" autocorrect="off" autocapitalize="off" />
-          <button id="btn-redeem-code" class="btn-redeem" type="button">Redeem</button>
-        </div>
-        <div id="redeem-feedback" class="redeem-feedback" style="display: none;"></div>
-      </div>
-
-      <!-- Badges Showcase Section -->
-      <div class="badges-store-section">
-        <span class="store-section-title">Available Profile Tags & Verification</span>
-
-        <div class="badge-store-grid">
-          
-          <!-- 1. Premium Tag -->
-          <div class="badge-shop-card" data-badge-id="premium">
-            <div class="badge-card-top">
-              <span class="player-tag tag-premium">PREMIUM</span>
-              <span class="badge-cost">4,000 Coins</span>
-            </div>
-            <div class="badge-card-body">
-              <span class="badge-name">Premium Tag</span>
-              <span class="badge-desc">Radiant amber gold glow on your profile & scoreboard.</span>
-            </div>
-            <button class="btn-badge-action state-buy" data-badge-id="premium">Unlock for 4,000 Coins</button>
-          </div>
-
-          <!-- 2. VIP Tag -->
-          <div class="badge-shop-card" data-badge-id="vip">
-            <div class="badge-card-top">
-              <span class="player-tag tag-vip">VIP</span>
-              <span class="badge-cost">10,000 Coins</span>
-            </div>
-            <div class="badge-card-body">
-              <span class="badge-name">VIP Tag</span>
-              <span class="badge-desc">Elite purple-violet neon aura across all multiplayer games.</span>
-            </div>
-            <button class="btn-badge-action state-buy" data-badge-id="vip">Unlock for 10,000 Coins</button>
-          </div>
-
-          <!-- 3. Red Xer Fired Verified Tick -->
-          <div class="badge-shop-card featured-badge" data-badge-id="xer_verified">
-            <div class="badge-card-top">
-              <span class="player-tag tag-xer-verified">
-                <svg class="xer-verified-tick" viewBox="0 0 24 24"><path fill="#ff003b" d="m8.6 22.5-1.9-3.2-3.6-.8.4-3.7-2.5-2.8 2.5-2.8-.4-3.7 3.6-.8 1.9-3.2 3.4 1.5 3.4-1.5 1.9 3.2 3.6.8-.4 3.7 2.5 2.8-2.5 2.8.4 3.7-3.6.8-1.9 3.2-3.4-1.5zm2.15-7.1 5.9-5.9-1.4-1.4-4.5 4.5-2.1-2.1-1.4 1.4z"/></svg>
-                <span class="xer-verified-label">Xer Verified</span>
-              </span>
-              <span class="badge-cost red-flame">100,000 Coins</span>
-            </div>
-            <div class="badge-card-body">
-              <span class="badge-name" style="color: #ff0844;">Red Xer Fired Verified Tick</span>
-              <span class="badge-desc">Official Meta-style Red Verified Badge. Ultimate prestige mark.</span>
-            </div>
-            <button class="btn-badge-action state-buy-xer" data-badge-id="xer_verified">Unlock for 100,000 Coins</button>
-          </div>
-
-        </div>
-      </div>
-
-    </div>
-  </div>
-
   <!-- Game Scripts -->
   <script src="js/audio.js"></script>
-  <script src="js/economy.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/multiplayer.js"></script>
   <script src="js/game.js"></script>
